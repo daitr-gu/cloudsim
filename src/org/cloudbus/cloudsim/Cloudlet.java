@@ -122,8 +122,15 @@ public class Cloudlet {
 	/** The Cloudlet has been resumed from <tt>PAUSED</tt> state. */
 	public static final int RESUMED = 8;
 
+	/** The Cloudlet has submited to a Partner node. */
+	public static final int PARTNER_SUBMMITED = 9 ;
+	
+	/** The Cloudlet has return to a Partner node. */
+	public static final int PARTNER_RETURN = 10 ;
+	
 	/** The cloudlet has failed due to a resource failure. */
-	public static final int FAILED_RESOURCE_UNAVAILABLE = 9;
+	public static final int FAILED_RESOURCE_UNAVAILABLE = 11;
+
 
 	/** The vm id. */
 	protected int vmId;
