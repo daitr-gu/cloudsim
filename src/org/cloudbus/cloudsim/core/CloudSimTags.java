@@ -269,17 +269,19 @@ public class CloudSimTags {
 	
 	public static final int PARTNER_EXEC_RETURN = BASE + 50;
 	
-	public static final int PARTNER_ESTIMATE = BASE + 51;
+	public static final int PARTNER_EXEC_INTERNAL_RETURN = BASE + 51;
 	
-	public static final int PARTNER_ESTIMATE_RETURN  = BASE + 52;
+	public static final int PARTNER_ESTIMATE = BASE + 52;
 	
-	public static final int PARTNER_INTERNAL_ESTIMATE_RETURN = BASE + 53;
+	public static final int PARTNER_ESTIMATE_RETURN  = BASE + 53;
 	
-	public static final int PARTNER_ESTIMATE_TIMEOUT = BASE + 54;
+	public static final int PARTNER_INTERNAL_ESTIMATE_RETURN = BASE + 54;
 	
-	public static final int DATACENTER_SUBMIT_TO_PARTNER = BASE + 55;
+	public static final int PARTNER_ESTIMATE_TIMEOUT = BASE + 55;
+	
+	public static final int DATACENTER_SUBMIT_TO_PARTNER = BASE + 56;
 
-    public static final int DATACENTER_RETURN_FROM_PARTNER = BASE + 56;
+    public static final int DATACENTER_RETURN_FROM_PARTNER = BASE + 57;
 
 	/** Private Constructor */
 	private CloudSimTags() {
