@@ -191,6 +191,9 @@ public class DatacenterBroker extends SimEntity {
 			case CloudSimTags.PARTNER_EXEC:
 				processPartnerCloudlet(ev);
 				break;
+			case CloudSimTags.PARTNER_EXEC_INTERNAL_RETURN:
+				processPartnerExecInternalReturn(ev);
+				break;
 			// other unknown tags are processed by this method
 			default:
 				processOtherEvent(ev);
@@ -385,7 +388,7 @@ public class DatacenterBroker extends SimEntity {
 			cloudlet.setVmId(vm.getId());
 			
 			sendNow(getVmsToDatacentersMap().get(vm.getId()), CloudSimTags.CLOUDLET_SUBMIT, cloudlet);
-//			sendNow(getId(), CloudSimTags.PARTNER_ESTIMATE, cloudlet);
+//			sendNow(getId(), CloudSimTags.PARTNER_EXEC, cloudlet);
 			cloudletsSubmitted++;
 			vmIndex = (vmIndex + 1) % getVmsCreatedList().size();
 			getCloudletSubmittedList().add(cloudlet);
@@ -474,10 +477,29 @@ public class DatacenterBroker extends SimEntity {
 	}
 	
 	protected void processPartnerCloudlet(SimEvent ev) {
+		Log.printLine(CloudSim.clock() + ": " + getName() + ": Received partner exec cloudlet from Broker #" + ev.getSource());
+		
 		Cloudlet cloudlet = (Cloudlet) ev.getData();
+		cloudlet.setUserId(getId());
 		int vmId = cloudlet.getVmId();
 		
-		sendNow(getVmsToDatacentersMap().get(vmId), CloudSimTags.PARTNER_EXEC, cloudlet);
+		Object[] data = { ev.getSource(), cloudlet };
+		
+		sendNow(getVmsToDatacentersMap().get(vmId), CloudSimTags.PARTNER_EXEC, data);
+	}
+	
+	protected void processPartnerExecInternalReturn(SimEvent ev) {
+		Log.printLine(CloudSim.clock() + ": " + getName() + ": Received exec result from datacenter #" + ev.getSource());
+		Object[] data = (Object[]) ev.getData();
+		
+		int partnerId = (int)data[0];
+		int result = (int)data[1];
+		String msg = (String)data[2];
+		Cloudlet cl = (Cloudlet)data[3];
+		
+		Object[] returnData = { result, msg, cl };
+		
+		sendNow(partnerId, CloudSimTags.PARTNER_EXEC_RETURN, returnData);
 	}
 
 	/**

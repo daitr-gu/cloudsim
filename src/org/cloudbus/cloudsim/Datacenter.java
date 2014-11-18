@@ -812,11 +812,41 @@ public class Datacenter extends SimEntity {
 	}
 	
 	protected void processPartnerCloudlet(SimEvent ev) {
-		Cloudlet cloudlet = (Cloudlet) ev.getData();
+		Log.printLine(CloudSim.clock() + ": " + getName() + ": Process partner cloudlet");
+		Object[] data = (Object[]) ev.getData();
+		Cloudlet cl = (Cloudlet)data[1];
 		
-		if (cloudlet.isFinished()) {
-			
+		if (cl.isFinished()) {
+			// do not process again
+			Object[] ret = { data[0], CloudSimTags.FALSE, "This cloudlet has been done before!", cl };
+			sendNow(cl.getUserId(), CloudSimTags.PARTNER_EXEC_INTERNAL_RETURN, ret);
+		} 
+		
+		// process this Cloudlet to this CloudResource
+		cl.setResourceParameter(getId(), getCharacteristics().getCostPerSecond(), getCharacteristics()
+				.getCostPerBw());
+
+		int userId = cl.getUserId();
+		int vmId = cl.getVmId();
+
+		// time to transfer the files
+		double fileTransferTime = predictFileTransferTime(cl.getRequiredFiles());
+
+		Host host = getVmAllocationPolicy().getHost(vmId, userId);
+		Vm vm = host.getVm(vmId, userId);
+		CloudletScheduler scheduler = vm.getCloudletScheduler();
+		double estimatedFinishTime = scheduler.cloudletSubmit(cl, fileTransferTime);
+
+		// if this cloudlet is in the exec queue
+		if (estimatedFinishTime > 0.0 && !Double.isInfinite(estimatedFinishTime) && cl.getStatus() == Cloudlet.INEXEC) {
+			estimatedFinishTime += fileTransferTime;
+			send(getId(), estimatedFinishTime, CloudSimTags.VM_DATACENTER_EVENT);
+			Log.printLine("Cloud exec: "+ estimatedFinishTime + " Cloudlet name:"+ cl.getCloudletId());
 		}
+		
+		Object[] returnData = {data[0], CloudSimTags.TRUE, "Cloudlet has been completed!", cl};
+		send(cl.getUserId(), estimatedFinishTime, CloudSimTags.PARTNER_EXEC_INTERNAL_RETURN, returnData);
+	
 	}
 
 	/**
