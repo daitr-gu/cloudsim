@@ -6,12 +6,19 @@
  * Copyright (c) 2009-2012, The University of Melbourne, Australia
  */
 
-package org.cloudbus.cloudsim;
+package org.cloudbus.cloudsim.network.datacenter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
+import org.cloudbus.cloudsim.Cloudlet;
+import org.cloudbus.cloudsim.CloudletScheduler;
+import org.cloudbus.cloudsim.ResCloudlet;
 import org.cloudbus.cloudsim.core.CloudSim;
+import org.cloudbus.cloudsim.core.CloudSimTags;
 
 /**
  * CloudletSchedulerSpaceShared implements a policy of scheduling performed by a virtual machine. It
@@ -20,11 +27,11 @@ import org.cloudbus.cloudsim.core.CloudSim;
  * even though cloudlets must wait for CPU, data transfer happens as soon as cloudlets are
  * submitted.
  * 
- * @author Rodrigo N. Calheiros
- * @author Anton Beloglazov
- * @since CloudSim Toolkit 1.0
+ * @author Saurabh Kumar Garg
+ * @author Saurabh Kumar Garg
+ * @since CloudSim Toolkit 3.0
  */
-public class CloudletSchedulerSpaceShared extends CloudletScheduler {
+public class NetworkCloudletSpaceSharedScheduler extends CloudletScheduler {
 
 	/** The cloudlet waiting list. */
 	private List<? extends ResCloudlet> cloudletWaitingList;
@@ -37,15 +44,18 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 
 	/** The cloudlet finished list. */
 	private List<? extends ResCloudlet> cloudletFinishedList;
-	
-	/** The cloudlet submmited to partner list. */
-	private List<? extends ResCloudlet> cloudletPartnerSubmittedList;
 
 	/** The current CPUs. */
 	protected int currentCpus;
 
 	/** The used PEs. */
 	protected int usedPes;
+
+	// for network
+
+	public Map<Integer, List<HostPacket>> pkttosend;
+
+	public Map<Integer, List<HostPacket>> pktrecv;
 
 	/**
 	 * Creates a new CloudletSchedulerSpaceShared object. This method must be invoked before
@@ -54,15 +64,16 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 	 * @pre $none
 	 * @post $none
 	 */
-	public CloudletSchedulerSpaceShared() {
+	public NetworkCloudletSpaceSharedScheduler() {
 		super();
 		cloudletWaitingList = new ArrayList<ResCloudlet>();
 		cloudletExecList = new ArrayList<ResCloudlet>();
 		cloudletPausedList = new ArrayList<ResCloudlet>();
 		cloudletFinishedList = new ArrayList<ResCloudlet>();
-		cloudletPartnerSubmittedList = new ArrayList<ResCloudlet>();
 		usedPes = 0;
 		currentCpus = 0;
+		pkttosend = new HashMap<Integer, List<HostPacket>>();
+		pktrecv = new HashMap<Integer, List<HostPacket>>();
 	}
 
 	/**
@@ -78,7 +89,7 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 	@Override
 	public double updateVmProcessing(double currentTime, List<Double> mipsShare) {
 		setCurrentMipsShare(mipsShare);
-		double timeSpam = currentTime - getPreviousTime(); // time since last update
+		// update
 		double capacity = 0.0;
 		int cpus = 0;
 
@@ -91,13 +102,76 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 		currentCpus = cpus;
 		capacity /= cpus; // average capacity of each cpu
 
-		// each machine in the exec list has the same amount of cpu
-		for (ResCloudlet rcl : getCloudletExecList()) {
-			rcl.updateCloudletFinishedSoFar((long) (capacity * timeSpam * rcl.getNumberOfPes() * Consts.MILLION));
+		for (ResCloudlet rcl : getCloudletExecList()) { // each machine in the
+			// exec list has the
+			// same amount of cpu
+
+			NetworkCloudlet cl = (NetworkCloudlet) rcl.getCloudlet();
+
+			// check status
+			// if execution stage
+			// update the cloudlet finishtime
+			// CHECK WHETHER IT IS WAITING FOR THE PACKET
+			// if packet received change the status of job and update the time.
+			//
+			if ((cl.currStagenum != -1)) {
+				if (cl.currStagenum == NetworkConstants.FINISH) {
+					break;
+				}
+				TaskStage st = cl.stages.get(cl.currStagenum);
+				if (st.type == NetworkConstants.EXECUTION) {
+
+					// update the time
+					cl.timespentInStage = Math.round(CloudSim.clock() - cl.timetostartStage);
+					if (cl.timespentInStage >= st.time) {
+						changetonextstage(cl, st);
+						// change the stage
+					}
+				}
+				if (st.type == NetworkConstants.WAIT_RECV) {
+					List<HostPacket> pktlist = pktrecv.get(st.peer);
+					List<HostPacket> pkttoremove = new ArrayList<HostPacket>();
+					if (pktlist != null) {
+						Iterator<HostPacket> it = pktlist.iterator();
+						HostPacket pkt = null;
+						if (it.hasNext()) {
+							pkt = it.next();
+							// Asumption packet will not arrive in the same cycle
+							if (pkt.reciever == cl.getVmId()) {
+								pkt.recievetime = CloudSim.clock();
+								st.time = CloudSim.clock() - pkt.sendtime;
+								changetonextstage(cl, st);
+								pkttoremove.add(pkt);
+							}
+						}
+						pktlist.removeAll(pkttoremove);
+						// if(pkt!=null)
+						// else wait for recieving the packet
+					}
+				}
+
+			} else {
+				cl.currStagenum = 0;
+				cl.timetostartStage = CloudSim.clock();
+
+				if (cl.stages.get(0).type == NetworkConstants.EXECUTION) {
+					NetDatacenterBroker.linkDC.schedule(
+							NetDatacenterBroker.linkDC.getId(),
+							cl.stages.get(0).time,
+							CloudSimTags.VM_DATACENTER_EVENT);
+				} else {
+					NetDatacenterBroker.linkDC.schedule(
+							NetDatacenterBroker.linkDC.getId(),
+							0.0001,
+							CloudSimTags.VM_DATACENTER_EVENT);
+					// /sendstage///
+				}
+			}
+
 		}
 
-		// no more cloudlets in this scheduler
-		if (getCloudletExecList().size() == 0 && getCloudletWaitingList().size() == 0) {
+		if (getCloudletExecList().size() == 0 && getCloudletWaitingList().size() == 0) { // no
+			// more cloudlets in this scheduler
 			setPreviousTime(currentTime);
 			return 0.0;
 		}
@@ -106,14 +180,18 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 		int finished = 0;
 		List<ResCloudlet> toRemove = new ArrayList<ResCloudlet>();
 		for (ResCloudlet rcl : getCloudletExecList()) {
-			// finished anyway, rounding issue...
-			if (rcl.getRemainingCloudletLength() == 0) {
+			// rounding issue...
+			if (((NetworkCloudlet) (rcl.getCloudlet())).currStagenum == NetworkConstants.FINISH) {
+				// stage is changed and packet to send
+				((NetworkCloudlet) (rcl.getCloudlet())).finishtime = CloudSim.clock();
 				toRemove.add(rcl);
 				cloudletFinish(rcl);
 				finished++;
 			}
 		}
 		getCloudletExecList().removeAll(toRemove);
+		// add all the CloudletExecList in waitingList.
+		// sort the waitinglist
 
 		// for each finished cloudlet, add a new one from the waiting list
 		if (!getCloudletWaitingList().isEmpty()) {
@@ -132,7 +210,7 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 					}
 				}
 				getCloudletWaitingList().removeAll(toRemove);
-			}
+			}// for(cont)
 		}
 
 		// estimate finish time of cloudlets in the execution queue
@@ -149,6 +227,57 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 		}
 		setPreviousTime(currentTime);
 		return nextEvent;
+	}
+
+	private void changetonextstage(NetworkCloudlet cl, TaskStage st) {
+		cl.timespentInStage = 0;
+		cl.timetostartStage = CloudSim.clock();
+		int currstage = cl.currStagenum;
+		if (currstage >= (cl.stages.size() - 1)) {
+			cl.currStagenum = NetworkConstants.FINISH;
+		} else {
+			cl.currStagenum = currstage + 1;
+			int i = 0;
+			for (i = cl.currStagenum; i < cl.stages.size(); i++) {
+				if (cl.stages.get(i).type == NetworkConstants.WAIT_SEND) {
+					HostPacket pkt = new HostPacket(
+							cl.getVmId(),
+							cl.stages.get(i).peer,
+							cl.stages.get(i).data,
+							CloudSim.clock(),
+							-1,
+							cl.getCloudletId(),
+							cl.stages.get(i).vpeer);
+					List<HostPacket> pktlist = pkttosend.get(cl.getVmId());
+					if (pktlist == null) {
+						pktlist = new ArrayList<HostPacket>();
+					}
+					pktlist.add(pkt);
+					pkttosend.put(cl.getVmId(), pktlist);
+
+				} else {
+					break;
+				}
+
+			}
+			NetDatacenterBroker.linkDC.schedule(
+					NetDatacenterBroker.linkDC.getId(),
+					0.0001,
+					CloudSimTags.VM_DATACENTER_EVENT);
+			if (i == cl.stages.size()) {
+				cl.currStagenum = NetworkConstants.FINISH;
+			} else {
+				cl.currStagenum = i;
+				if (cl.stages.get(i).type == NetworkConstants.EXECUTION) {
+					NetDatacenterBroker.linkDC.schedule(
+							NetDatacenterBroker.linkDC.getId(),
+							cl.stages.get(i).time,
+							CloudSimTags.VM_DATACENTER_EVENT);
+				}
+
+			}
+		}
+
 	}
 
 	/**
@@ -173,7 +302,7 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 		for (ResCloudlet rcl : getCloudletExecList()) {
 			if (rcl.getCloudletId() == cloudletId) {
 				getCloudletExecList().remove(rcl);
-				if (rcl.getRemainingCloudletLength() == 0) {
+				if (rcl.getRemainingCloudletLength() == 0.0) {
 					cloudletFinish(rcl);
 				} else {
 					rcl.setCloudletStatus(Cloudlet.CANCELED);
@@ -228,7 +357,7 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 		if (found) {
 			// moves to the paused list
 			ResCloudlet rgl = getCloudletExecList().remove(position);
-			if (rgl.getRemainingCloudletLength() == 0) {
+			if (rgl.getRemainingCloudletLength() == 0.0) {
 				cloudletFinish(rgl);
 			} else {
 				rgl.setCloudletStatus(Cloudlet.PAUSED);
@@ -252,7 +381,7 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 		if (found) {
 			// moves to the paused list
 			ResCloudlet rgl = getCloudletWaitingList().remove(position);
-			if (rgl.getRemainingCloudletLength() == 0) {
+			if (rgl.getRemainingCloudletLength() == 0.0) {
 				cloudletFinish(rgl);
 			} else {
 				rgl.setCloudletStatus(Cloudlet.PAUSED);
@@ -349,7 +478,8 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 
 		}
 
-		// not found in the paused list: either it is in in the queue, executing or not exist
+		// not found in the paused list: either it is in in the queue, executing
+		// or not exist
 		return 0.0;
 
 	}
@@ -372,14 +502,14 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 			for (int i = 0; i < cloudlet.getNumberOfPes(); i++) {
 				rcl.setMachineAndPeId(0, i);
 			}
+
 			getCloudletExecList().add(rcl);
 			usedPes += cloudlet.getNumberOfPes();
 		} else {// no enough free PEs: go to the waiting queue
 			ResCloudlet rcl = new ResCloudlet(cloudlet);
-			rcl.setCloudletStatus(Cloudlet.PARTNER_SUBMMITED);
-//			getCloudletWaitingList().add(rcl);
-			getCloudletPartnerSubmittedList().add(rcl);
-//			return 0.0;
+			rcl.setCloudletStatus(Cloudlet.QUEUED);
+			getCloudletWaitingList().add(rcl);
+			return 0.0;
 		}
 
 		// calculate the expected time for cloudlet completion
@@ -403,44 +533,6 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 		cloudlet.setCloudletLength(length);
 		return cloudlet.getCloudletLength() / capacity;
 	}
-	
-	/**
-	 * Estimate cloudlet processing time
-	 * 
-	 * @param cloudlet the partner cloudlet
-	 * @return the processing time of this cloudlet
-	 * 			if the Vm is busy return 0.0
-	 * 
-	 * @pre cloudlet != null
-	 * @post none
-	 */
-	@Override
-	public double estimatePartnerCloudlet(Cloudlet cloudlet, double fileTransferTime) {
-		if ((currentCpus - usedPes) >= cloudlet.getNumberOfPes()) {
-			// this Vm can process cloudlet
-			// calculate the expected time for cloudlet completion
-			double capacity = 0.0;
-			int cpus = 0;
-			for (Double mips : getCurrentMipsShare()) {
-				capacity += mips;
-				if (mips > 0) {
-					cpus++;
-				}
-			}
-			
-			capacity /= cpus;
-
-			// use the current capacity to estimate the extra amount of
-			// time to file transferring. It must be added to the cloudlet length
-			double extraSize = capacity * fileTransferTime;
-			long length = cloudlet.getCloudletLength();
-			length += extraSize;
-			cloudlet.setCloudletLength(length);
-			return cloudlet.getCloudletLength() / capacity;
-		} else {// no enough free PEs
-			return 0.0;
-		}
-	}
 
 	/*
 	 * (non-Javadoc)
@@ -448,7 +540,8 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 	 */
 	@Override
 	public double cloudletSubmit(Cloudlet cloudlet) {
-		return cloudletSubmit(cloudlet, 0.0);
+		cloudletSubmit(cloudlet, 0);
+		return 0;
 	}
 
 	/**
@@ -653,9 +746,8 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 
 	/*
 	 * (non-Javadoc)
-	 * @see
-	 * org.cloudbus.cloudsim.CloudletScheduler#getTotalCurrentAvailableMipsForCloudlet(org.cloudbus
-	 * .cloudsim.ResCloudlet, java.util.List)
+	 * @see org.cloudbus.cloudsim.CloudletScheduler# getTotalCurrentAvailableMipsForCloudlet
+	 * (org.cloudbus.cloudsim.ResCloudlet, java.util.List)
 	 */
 	@Override
 	public double getTotalCurrentAvailableMipsForCloudlet(ResCloudlet rcl, List<Double> mipsShare) {
@@ -674,49 +766,38 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 
 	/*
 	 * (non-Javadoc)
-	 * @see
-	 * org.cloudbus.cloudsim.CloudletScheduler#getTotalCurrentAllocatedMipsForCloudlet(org.cloudbus
-	 * .cloudsim.ResCloudlet, double)
+	 * @see org.cloudbus.cloudsim.CloudletScheduler# getTotalCurrentAllocatedMipsForCloudlet
+	 * (org.cloudbus.cloudsim.ResCloudlet, double)
 	 */
 	@Override
 	public double getTotalCurrentAllocatedMipsForCloudlet(ResCloudlet rcl, double time) {
-		// TODO Auto-generated method stub
 		return 0.0;
 	}
 
 	/*
 	 * (non-Javadoc)
-	 * @see
-	 * org.cloudbus.cloudsim.CloudletScheduler#getTotalCurrentRequestedMipsForCloudlet(org.cloudbus
-	 * .cloudsim.ResCloudlet, double)
+	 * @see org.cloudbus.cloudsim.CloudletScheduler# getTotalCurrentRequestedMipsForCloudlet
+	 * (org.cloudbus.cloudsim.ResCloudlet, double)
 	 */
 	@Override
 	public double getTotalCurrentRequestedMipsForCloudlet(ResCloudlet rcl, double time) {
-		// TODO Auto-generated method stub
 		return 0.0;
 	}
 
 	@Override
-	public double getCurrentRequestedUtilizationOfRam() {
-		// TODO Auto-generated method stub
+	public double getCurrentRequestedUtilizationOfBw() {
 		return 0;
 	}
 
 	@Override
-	public double getCurrentRequestedUtilizationOfBw() {
-		// TODO Auto-generated method stub
+	public double getCurrentRequestedUtilizationOfRam() {
 		return 0;
 	}
-	
+
 	@Override
-	@SuppressWarnings("unchecked")
-	public <T extends ResCloudlet> List<T>  getCloudletPartnerSubmittedList() {
-		return  (List<T>) cloudletPartnerSubmittedList;
-	}
-	
-	public void setCloudletPartnerSubmittedList(
-			List<? extends ResCloudlet> cloudletPartnerSubmittedList) {
-		this.cloudletPartnerSubmittedList = cloudletPartnerSubmittedList;
+	public double estimatePartnerCloudlet(Cloudlet cloudlet,
+			double fileTransferTime) {
+		return 0;
 	}
 
 }

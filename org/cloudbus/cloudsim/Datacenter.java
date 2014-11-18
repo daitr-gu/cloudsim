@@ -258,25 +258,12 @@ public class Datacenter extends SimEntity {
 				processPartnerCloudlet(ev);
 				break;
 
-			case CloudSimTags.DATACENTER_SUBMIT_TO_PARTNER: 
-				processSubmmitToParner(ev);
-				break;
 			// other unknown tags are processed by this method
 			default:
 				processOtherEvent(ev);
 				break;
 		}
 	}
-
-	/**
-	 * submit cloudlet to another datacenter to estimate finish time 
-	 */
-	public void processSubmmitToParner(SimEvent ev) {
-		ResCloudlet rCl = (ResCloudlet) ev.getData();
-		Log.printLine("processSubmmitToParner:" +rCl.getCloudletId());
-		sendNow(rCl.getUserId(), CloudSimTags.PARTNER_ESTIMATE, rCl);
-	}
-	
 
 	/**
 	 * Process data del.
@@ -748,15 +735,9 @@ public class Datacenter extends SimEntity {
 			double estimatedFinishTime = scheduler.cloudletSubmit(cl, fileTransferTime);
 
 			// if this cloudlet is in the exec queue
-			if (estimatedFinishTime > 0.0 && !Double.isInfinite(estimatedFinishTime) && cl.getStatus() == Cloudlet.INEXEC) {
+			if (estimatedFinishTime > 0.0 && !Double.isInfinite(estimatedFinishTime)) {
 				estimatedFinishTime += fileTransferTime;
 				send(getId(), estimatedFinishTime, CloudSimTags.VM_DATACENTER_EVENT);
-				Log.printLine("Cloud exec: "+ estimatedFinishTime + " Cloudlet name:"+ cl.getCloudletId());
-			} else if(estimatedFinishTime > 0.0  && cl.getStatus() == Cloudlet.PARTNER_SUBMMITED){
-				estimatedFinishTime += fileTransferTime;
-				Log.printLine("Cloud submmited to partner: "+ estimatedFinishTime + " Cloudlet name:"+ cl.getCloudletId());
-				ResCloudlet resCl = (ResCloudlet) scheduler.getCloudletPartnerSubmittedList().get(scheduler.getCloudletPartnerSubmittedList().size() - 1);; 
-				send(getId(), 0, CloudSimTags.DATACENTER_SUBMIT_TO_PARTNER,resCl);
 			}
 
 			if (ack) {

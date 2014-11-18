@@ -260,4 +260,8 @@ public abstract class CloudletScheduler {
 		return currentMipsShare;
 	}
 
+	public <T extends ResCloudlet> List<T>  getCloudletPartnerSubmittedList() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

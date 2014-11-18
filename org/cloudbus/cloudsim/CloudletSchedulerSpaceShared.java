@@ -37,9 +37,6 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 
 	/** The cloudlet finished list. */
 	private List<? extends ResCloudlet> cloudletFinishedList;
-	
-	/** The cloudlet submmited to partner list. */
-	private List<? extends ResCloudlet> cloudletPartnerSubmittedList;
 
 	/** The current CPUs. */
 	protected int currentCpus;
@@ -60,7 +57,6 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 		cloudletExecList = new ArrayList<ResCloudlet>();
 		cloudletPausedList = new ArrayList<ResCloudlet>();
 		cloudletFinishedList = new ArrayList<ResCloudlet>();
-		cloudletPartnerSubmittedList = new ArrayList<ResCloudlet>();
 		usedPes = 0;
 		currentCpus = 0;
 	}
@@ -376,10 +372,9 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 			usedPes += cloudlet.getNumberOfPes();
 		} else {// no enough free PEs: go to the waiting queue
 			ResCloudlet rcl = new ResCloudlet(cloudlet);
-			rcl.setCloudletStatus(Cloudlet.PARTNER_SUBMMITED);
-//			getCloudletWaitingList().add(rcl);
-			getCloudletPartnerSubmittedList().add(rcl);
-//			return 0.0;
+			rcl.setCloudletStatus(Cloudlet.QUEUED);
+			getCloudletWaitingList().add(rcl);
+			return 0.0;
 		}
 
 		// calculate the expected time for cloudlet completion
@@ -706,17 +701,6 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 	public double getCurrentRequestedUtilizationOfBw() {
 		// TODO Auto-generated method stub
 		return 0;
-	}
-	
-	@Override
-	@SuppressWarnings("unchecked")
-	public <T extends ResCloudlet> List<T>  getCloudletPartnerSubmittedList() {
-		return  (List<T>) cloudletPartnerSubmittedList;
-	}
-	
-	public void setCloudletPartnerSubmittedList(
-			List<? extends ResCloudlet> cloudletPartnerSubmittedList) {
-		this.cloudletPartnerSubmittedList = cloudletPartnerSubmittedList;
 	}
 
 }

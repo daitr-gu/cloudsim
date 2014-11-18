@@ -465,8 +465,6 @@ public final class DataCloudTags {
 	 */
 	public static final int CTLG_MODIFY_MASTER_ERROR_READ_ONLY = CTLG_BASE + 55;
 
-	// /////////////////////////////////////////////////////////////////////
-
 	/** Private Constructor */
 	private DataCloudTags() {
 		throw new UnsupportedOperationException("DataCloudTags cannot be instantiated");
