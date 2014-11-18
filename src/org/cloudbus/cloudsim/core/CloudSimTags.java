@@ -283,6 +283,8 @@ public class CloudSimTags {
 
     public static final int DATACENTER_RETURN_FROM_PARTNER = BASE + 57;
 
+	public static final int PARTNER_ESTIMATE_SENT = BASE + 58;
+
 	/** Private Constructor */
 	private CloudSimTags() {
 		throw new UnsupportedOperationException("CloudSim Tags cannot be instantiated");

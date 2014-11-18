@@ -272,9 +272,9 @@ public class Datacenter extends SimEntity {
 	 * submit cloudlet to another datacenter to estimate finish time 
 	 */
 	public void processSubmmitToParner(SimEvent ev) {
-		ResCloudlet rCl = (ResCloudlet) ev.getData();
-		Log.printLine("processSubmmitToParner:" +rCl.getCloudletId());
-		sendNow(rCl.getUserId(), CloudSimTags.PARTNER_ESTIMATE, rCl);
+		Cloudlet cl = (Cloudlet) ev.getData();
+		Log.printLine("process Submmit To Borker request partner estimate:" +cl.getCloudletId());
+		sendNow(cl.getUserId(), CloudSimTags.PARTNER_ESTIMATE_SENT, cl);
 	}
 	
 
@@ -754,9 +754,8 @@ public class Datacenter extends SimEntity {
 				Log.printLine("Cloud exec: "+ estimatedFinishTime + " Cloudlet name:"+ cl.getCloudletId());
 			} else if(estimatedFinishTime > 0.0  && cl.getStatus() == Cloudlet.PARTNER_SUBMMITED){
 				estimatedFinishTime += fileTransferTime;
-				Log.printLine("Cloud submmited to partner: "+ estimatedFinishTime + " Cloudlet name:"+ cl.getCloudletId());
-				ResCloudlet resCl = (ResCloudlet) scheduler.getCloudletPartnerSubmittedList().get(scheduler.getCloudletPartnerSubmittedList().size() - 1);; 
-				send(getId(), 0, CloudSimTags.DATACENTER_SUBMIT_TO_PARTNER,resCl);
+				Log.printLine("Cloud submmited to partner: "+ estimatedFinishTime + " Cloudlet name:"+ cl.getCloudletId()); 
+				send(getId(), 0, CloudSimTags.DATACENTER_SUBMIT_TO_PARTNER,cl);
 			}
 
 			if (ack) {

@@ -972,4 +972,15 @@ public class CloudSim {
 		return paused;
 	}
 
+	public static List<Integer> getBrokerIdsList() {
+		List<Integer> brokerIdsList = new ArrayList<Integer>();
+		String borkerName  = "Broker";
+		for(SimEntity en: entities){
+			if (en.getName().toLowerCase().indexOf(borkerName.toLowerCase()) != -1 ) {
+				brokerIdsList.add(en.getId());
+			}
+		}
+		return brokerIdsList;
+	}
+
 }

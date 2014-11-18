@@ -72,6 +72,17 @@ public class DatacenterBroker extends SimEntity {
 	
 	/** The estimate cloudlet list. */
 	protected Map<Integer, Map<Integer, EstimationCloudletObserve>> estimateCloudletMap;
+	
+	/** The brokers list*/
+	protected List<Integer> brokerIdsList;
+	
+	/** The list of cloudled has sendto partner to estimate */
+	protected List<EstimationCloudletOfPartner> requestEstimateList; 
+	
+	/** The list of cloudled has sendto partner to estimate */
+	protected List<EstimationCloudletOfPartner> returnEstimateList;
+
+	
 
 	/**
 	 * Created a new DatacenterBroker object.
@@ -101,6 +112,10 @@ public class DatacenterBroker extends SimEntity {
 		setVmsToDatacentersMap(new HashMap<Integer, Integer>());
 		setDatacenterCharacteristicsList(new HashMap<Integer, DatacenterCharacteristics>());
 		setEstimateCloudletMap(new HashMap<Integer, Map<Integer, EstimationCloudletObserve>>());
+		setBrokerIdsList(new ArrayList<Integer>());
+		setRequestEstimateList(new ArrayList<EstimationCloudletOfPartner>());
+		setReturnEstimateList(new ArrayList<EstimationCloudletOfPartner>());
+		
 	}
 
 	public Map<Integer, Map<Integer, EstimationCloudletObserve>> getEstimateCloudletMap() {
@@ -191,13 +206,17 @@ public class DatacenterBroker extends SimEntity {
 			case CloudSimTags.PARTNER_EXEC:
 				processPartnerCloudlet(ev);
 				break;
+			//if the cloudlet is wanted to process in another DB center
+			case CloudSimTags.PARTNER_ESTIMATE_SENT:
+				processSentTaskToPartnerEstimate(ev);
+				break;
 			// other unknown tags are processed by this method
 			default:
 				processOtherEvent(ev);
 				break;
 		}
 	}
-
+	
 	/**
 	 * Process the return of a request for the characteristics of a PowerDatacenter.
 	 * 
@@ -225,10 +244,11 @@ public class DatacenterBroker extends SimEntity {
 	protected void processResourceCharacteristicsRequest(SimEvent ev) {
 		setDatacenterIdsList(CloudSim.getCloudResourceList());
 		setDatacenterCharacteristicsList(new HashMap<Integer, DatacenterCharacteristics>());
+		Log.printLine("CloudSim.getBrokerIdsList: "+CloudSim.getBrokerIdsList());
+		setBrokerIdsList(CloudSim.getBrokerIdsList());
 
 		Log.printLine(CloudSim.clock() + ": " + getName() + ": Cloud Resource List received with "
 				+ getDatacenterIdsList().size() + " resource(s)");
-
 		for (Integer datacenterId : getDatacenterIdsList()) {
 			sendNow(datacenterId, CloudSimTags.RESOURCE_CHARACTERISTICS, getId());
 		}
@@ -479,7 +499,32 @@ public class DatacenterBroker extends SimEntity {
 		
 		sendNow(getVmsToDatacentersMap().get(vmId), CloudSimTags.PARTNER_EXEC, cloudlet);
 	}
-
+	
+	/**
+	 *	process send data to all partner to estimate time process 
+	 * @param ev
+	 */
+	protected void processSentTaskToPartnerEstimate(SimEvent ev) {
+		Cloudlet cl = (Cloudlet) ev.getData();
+		//if process is require estimate in partners
+		if(cl.getStatus() == Cloudlet.PARTNER_SUBMMITED ){
+			if(getDatacenterIdsList().size() == 1 && getBrokerIdsList().get(0) == getId()){
+				Log.printLine("No parner found, can not send task anywhere");
+			}
+			for( Integer partnerIds : this.getBrokerIdsList()){
+				if(partnerIds != getId()){
+					Log.printLine("Cloundlet #"+ cl.getCloudletId()+ "have send to broker #"+partnerIds);
+					//send to partner
+					send(partnerIds, 0, CloudSimTags.PARTNER_ESTIMATE, cl);
+					//add to requested list
+					ResCloudlet rCl = new ResCloudlet(cl);
+					EstimationCloudletOfPartner  es = new EstimationCloudletOfPartner(rCl, partnerIds);
+					getRequestEstimateList().add(es);
+				}
+			}
+		}
+	}
+	
 	/**
 	 * Destroy the virtual machines running in datacenters.
 	 * 
@@ -763,4 +808,31 @@ public class DatacenterBroker extends SimEntity {
 		this.datacenterRequestedIdsList = datacenterRequestedIdsList;
 	}
 
+	public List<Integer> getBrokerIdsList() {
+		return brokerIdsList;
+	}
+
+	public void setBrokerIdsList(List<Integer> brokerIdsList) {
+		this.brokerIdsList = brokerIdsList;
+	}
+
+	public List<EstimationCloudletOfPartner> getRequestEstimateList() {
+		return requestEstimateList;
+	}
+
+	public void setRequestEstimateList(
+			List<EstimationCloudletOfPartner> requestEstimateList) {
+		this.requestEstimateList = requestEstimateList;
+	}
+
+	public List<EstimationCloudletOfPartner> getReturnEstimateList() {
+		return returnEstimateList;
+	}
+
+	public void setReturnEstimateList(
+			List<EstimationCloudletOfPartner> returnEstimateList) {
+		this.returnEstimateList = returnEstimateList;
+	}
+
+	
 }

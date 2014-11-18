@@ -136,9 +136,18 @@ public class Example1 {
 					utilizationModel);
 			cloudlet.setUserId(brokerId);
 			cloudlet.setVmId(vmid);
+			
+			Cloudlet cloudlet1 = new Cloudlet(id, length, pesNumber, fileSize,
+					outputSize, utilizationModel, utilizationModel,
+					utilizationModel);
+			cloudlet1.setUserId(brokerId);
+			cloudlet1.setVmId(vmid);
 
+			
+			
 			// add the cloudlet to the list
 			cloudletList.add(cloudlet);
+			cloudletList.add(cloudlet1);
 			
 			// submit cloudlet list to the broker
 			broker.submitCloudletList(cloudletList);
