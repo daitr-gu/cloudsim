@@ -76,11 +76,10 @@ public class DatacenterBroker extends SimEntity {
 	/** The brokers list*/
 	protected List<Integer> brokerIdsList;
 	
-	/** The list of cloudled has sendto partner to estimate */
-	protected List<EstimationCloudletOfPartner> requestEstimateList; 
+	/** The estimate cloulet list of partner */
 	
-	/** The list of cloudled has sendto partner to estimate */
-	protected List<EstimationCloudletOfPartner> returnEstimateList;
+	protected Map<Integer,EstimationCloudletOfPartner> estimateCloudletofParnerMap;
+
 
 	
 
@@ -113,8 +112,7 @@ public class DatacenterBroker extends SimEntity {
 		setDatacenterCharacteristicsList(new HashMap<Integer, DatacenterCharacteristics>());
 		setEstimateCloudletMap(new HashMap<Integer, Map<Integer, EstimationCloudletObserve>>());
 		setBrokerIdsList(new ArrayList<Integer>());
-		setRequestEstimateList(new ArrayList<EstimationCloudletOfPartner>());
-		setReturnEstimateList(new ArrayList<EstimationCloudletOfPartner>());
+		setEstimateCloudletofParnerMap(new HashMap<Integer, EstimationCloudletOfPartner>());
 		
 	}
 
@@ -209,7 +207,10 @@ public class DatacenterBroker extends SimEntity {
 			//if the cloudlet is wanted to process in another DB center
 			case CloudSimTags.PARTNER_ESTIMATE_SENT:
 				processSentTaskToPartnerEstimate(ev);
-
+				
+			//if the cloudle estimate result returned from partner
+			case CloudSimTags.PARTNER_ESTIMATE_RETURN: 
+				processReturnEstimateFromParner(ev);
 			case CloudSimTags.PARTNER_EXEC_INTERNAL_RETURN:
 				processPartnerExecInternalReturn(ev);
 				break;
@@ -219,7 +220,7 @@ public class DatacenterBroker extends SimEntity {
 				break;
 		}
 	}
-	
+
 	/**
 	 * Process the return of a request for the characteristics of a PowerDatacenter.
 	 * 
@@ -533,16 +534,39 @@ public class DatacenterBroker extends SimEntity {
 			if(getDatacenterIdsList().size() == 1 && getBrokerIdsList().get(0) == getId()){
 				Log.printLine("No parner found, can not send task anywhere");
 			}
+			ResCloudlet rCl = new ResCloudlet(cl); 
+			List<Integer> partnerIdsList  = new ArrayList<Integer>();
 			for( Integer partnerIds : this.getBrokerIdsList()){
 				if(partnerIds != getId()){
 					Log.printLine("Cloundlet #"+ cl.getCloudletId()+ "have send to broker #"+partnerIds);
 					//send to partner
 					send(partnerIds, 0, CloudSimTags.PARTNER_ESTIMATE, cl);
 					//add to requested list
-					ResCloudlet rCl = new ResCloudlet(cl);
-					EstimationCloudletOfPartner  es = new EstimationCloudletOfPartner(rCl, partnerIds);
-					getRequestEstimateList().add(es);
+					partnerIdsList.add(partnerIds);
 				}
+			}
+			EstimationCloudletOfPartner esOfPatner = new EstimationCloudletOfPartner(rCl, partnerIdsList);
+			getEstimateCloudletofParnerMap().put(rCl.getCloudletId(), esOfPatner);
+		}
+	}
+	/**
+	 *  Process result estimate form partner ID 
+	 *  If all estimate has been received send execute to partner have best execute time to execute 
+	 * @param ev
+	 */
+	protected void processReturnEstimateFromParner(SimEvent ev) {
+		Log.printLine(CloudSim.clock() + ": " + getName() + ": Received estimate result from Broker #" + ev.getSource());
+		ResCloudlet rCl =(ResCloudlet) ev.getData();
+		Integer clouletId = rCl.getCloudletId();
+		Integer partnerId = rCl.getUserId();
+		
+		EstimationCloudletOfPartner partnerCloudletEstimateList = getEstimateCloudletofParnerMap().get(clouletId);
+		
+		if (partnerCloudletEstimateList.getPartnerIdsList().contains(partnerId)) {
+			partnerCloudletEstimateList.receiveEstimateResult(partnerId, rCl);			
+			if (partnerCloudletEstimateList.isFinished()) {
+				// send result to partner
+				sendNow(partnerId, CloudSimTags.PARTNER_EXEC, rCl.getCloudlet());
 			}
 		}
 	}
@@ -838,23 +862,15 @@ public class DatacenterBroker extends SimEntity {
 		this.brokerIdsList = brokerIdsList;
 	}
 
-	public List<EstimationCloudletOfPartner> getRequestEstimateList() {
-		return requestEstimateList;
+	public Map<Integer, EstimationCloudletOfPartner> getEstimateCloudletofParnerMap() {
+		return estimateCloudletofParnerMap;
 	}
 
-	public void setRequestEstimateList(
-			List<EstimationCloudletOfPartner> requestEstimateList) {
-		this.requestEstimateList = requestEstimateList;
+	public void setEstimateCloudletofParnerMap(
+			Map<Integer, EstimationCloudletOfPartner> estimateCloudletofParnerMap) {
+		this.estimateCloudletofParnerMap = estimateCloudletofParnerMap;
 	}
 
-	public List<EstimationCloudletOfPartner> getReturnEstimateList() {
-		return returnEstimateList;
-	}
-
-	public void setReturnEstimateList(
-			List<EstimationCloudletOfPartner> returnEstimateList) {
-		this.returnEstimateList = returnEstimateList;
-	}
 
 	
 }
