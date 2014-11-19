@@ -397,7 +397,7 @@ public class DatacenterBroker extends SimEntity {
 			if (cloudlet.getVmId() == -1) {
 				vm = getVmsCreatedList().get(vmIndex);
 			} else { // submit to the specific vm
-				Log.printLine("DEBUG cloudlet.getVmId(): "+cloudlet.getVmId() );
+//				Log.printLine("DEBUG cloudlet.getVmId(): "+cloudlet.getVmId() );
 				vm = VmList.getById(getVmsCreatedList(), cloudlet.getVmId());
 				if (vm == null) { // vm was not created
 					Log.printLine(CloudSim.clock() + ": " + getName() + ": Postponing execution of cloudlet "
@@ -449,8 +449,8 @@ public class DatacenterBroker extends SimEntity {
 			sendNow(i, CloudSimTags.PARTNER_ESTIMATE, data);
 		}
 		
-		Object[] timeoutData = {ev.getSource(), cloudlet.getCloudletId()};
-		send(getId(), 30, CloudSimTags.PARTNER_ESTIMATE_TIMEOUT, timeoutData);
+//		Object[] timeoutData = {ev.getSource(), cloudlet.getCloudletId()};
+//		send(getId(), 30, CloudSimTags.PARTNER_ESTIMATE_TIMEOUT, timeoutData);
 	}
 	
 	protected void processPartnerCloudletInternalEstimateReturn(SimEvent ev) {
@@ -558,14 +558,13 @@ public class DatacenterBroker extends SimEntity {
 	 */
 	protected void processReturnEstimateFromParner(SimEvent ev) {
 		Log.printLine(CloudSim.clock() + ": " + getName() + ": Received estimate result from Broker #" + ev.getSource());
-		Log.printLine(ev.getData() instanceof Cloudlet);
 		ResCloudlet rCl =(ResCloudlet) ev.getData();
 		Integer clouletId = rCl.getCloudletId();
-		Integer partnerId = rCl.getUserId();
+		Integer partnerId =  ev.getSource();
 		
 		EstimationCloudletOfPartner partnerCloudletEstimateList = getEstimateCloudletofParnerMap().get(clouletId);
-		
 		if (partnerCloudletEstimateList.getPartnerIdsList().contains(partnerId)) {
+
 			partnerCloudletEstimateList.receiveEstimateResult(partnerId, rCl);			
 			if (partnerCloudletEstimateList.isFinished()) {
 				// send result to partner
