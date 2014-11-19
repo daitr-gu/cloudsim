@@ -478,7 +478,7 @@ public class DatacenterBroker extends SimEntity {
 				sendNow(partnerID, CloudSimTags.PARTNER_ESTIMATE_RETURN, eco.getResCloudlet());
 				
 				// remove partner estimation cloudlet 
-				partnerCloudletList.remove(eco);
+				partnerCloudletList.remove(cloudletID);
 			}
 		}
 	}
@@ -492,11 +492,11 @@ public class DatacenterBroker extends SimEntity {
 			Map<Integer, EstimationCloudletObserve> partnerCloudletList = getEstimateCloudletMap().get(partnerId);
 			
 			if (partnerCloudletList.containsKey(cloudletId)) {
-				Log.printLine(CloudSim.clock() + ": " + getName() + ": Partner estimate timeout!");
+//				Log.printLine(CloudSim.clock() + ": " + getName() + ": Partner estimate timeout!");
 				
 				EstimationCloudletObserve eco = partnerCloudletList.get(cloudletId);
 				// send result to partner
-				sendNow(partnerId, CloudSimTags.PARTNER_ESTIMATE_RETURN, eco.getResCloudlet());
+//				sendNow(partnerId, CloudSimTags.PARTNER_ESTIMATE_RETURN, eco.getResCloudlet());
 				
 				// remove partner estimation cloudlet
 				partnerCloudletList.remove(eco);
