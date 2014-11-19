@@ -153,7 +153,7 @@ public class Example1 {
 					outputSize, utilizationModel, utilizationModel,
 					utilizationModel);
 			cloudlet1.setUserId(hcmusBrokerId);
-			cloudlet1.setVmId(vmid + 1);
+			cloudlet1.setVmId(vmid);
 
 			
 			
