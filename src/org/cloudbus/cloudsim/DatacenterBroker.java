@@ -14,6 +14,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.text.StyledEditorKit.BoldAction;
+
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.CloudSimTags;
 import org.cloudbus.cloudsim.core.SimEntity;
@@ -529,9 +531,19 @@ public class DatacenterBroker extends SimEntity {
 	}
 	
 	private void processPartnerExecReturn(SimEvent ev) {
-		Object result = ev.getData();
-		//TODO 
-		Log.printLine(CloudSim.clock()+ "Cloulet ");
+		//TODO
+		Log.printLine(CloudSim.clock()+ " Partner returned exec result");
+		Object[]  data =  (Object[])ev.getData();
+		int result = (int) data[0];
+		String msg  = (String)data[1];
+		Cloudlet cl = (Cloudlet)data[2];
+ 
+		if(result == 1){
+			Log.printLine(CloudSim.clock() + " Cloudlet: #"+ cl.getCloudletId()+" has been exec from Broker: #"+ev.getSource());
+		} 
+		else {
+			Log.printLine(CloudSim.clock() + " Cloudlet: #"+ cl.getCloudletId()+" has been failed exec from Broker: #"+ev.getSource());
+		}
 		
 	}
 	
