@@ -207,10 +207,11 @@ public class DatacenterBroker extends SimEntity {
 			//if the cloudlet is wanted to process in another DB center
 			case CloudSimTags.PARTNER_ESTIMATE_SENT:
 				processSentTaskToPartnerEstimate(ev);
-				
+				break;
 			//if the cloudle estimate result returned from partner
 			case CloudSimTags.PARTNER_ESTIMATE_RETURN: 
 				processReturnEstimateFromParner(ev);
+				break;
 			case CloudSimTags.PARTNER_EXEC_INTERNAL_RETURN:
 				processPartnerExecInternalReturn(ev);
 				break;
