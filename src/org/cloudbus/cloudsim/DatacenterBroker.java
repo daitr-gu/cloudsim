@@ -539,10 +539,10 @@ public class DatacenterBroker extends SimEntity {
 		Cloudlet cl = (Cloudlet)data[2];
  
 		if(result == 1){
-			Log.printLine(CloudSim.clock() + " Cloudlet: #"+ cl.getCloudletId()+" has been exec from Broker: #"+ev.getSource());
+			Log.printLine(CloudSim.clock() + " Cloudlet: #"+ cl.getCloudletId()+" has been exec from Broker: #" +CloudSim.getEntityName(ev.getSource())+"#"+ev.getSource());
 		} 
 		else {
-			Log.printLine(CloudSim.clock() + " Cloudlet: #"+ cl.getCloudletId()+" has been failed exec from Broker: #"+ev.getSource());
+			Log.printLine(CloudSim.clock() + " Cloudlet: #"+ cl.getCloudletId()+" has been failed exec from Broker:"+ CloudSim.getEntityName(ev.getSource())+"#"+ev.getSource());
 		}
 		
 	}
