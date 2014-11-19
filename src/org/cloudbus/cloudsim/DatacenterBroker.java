@@ -215,6 +215,9 @@ public class DatacenterBroker extends SimEntity {
 			case CloudSimTags.PARTNER_EXEC_INTERNAL_RETURN:
 				processPartnerExecInternalReturn(ev);
 				break;
+			case CloudSimTags.PARTNER_EXEC_RETURN: 
+				processPartnerExecReturn(ev);
+				break;
 			// other unknown tags are processed by this method
 			default:
 				processOtherEvent(ev);
@@ -523,6 +526,13 @@ public class DatacenterBroker extends SimEntity {
 		Object[] returnData = { result, msg, cl };
 		
 		sendNow(partnerId, CloudSimTags.PARTNER_EXEC_RETURN, returnData);
+	}
+	
+	private void processPartnerExecReturn(SimEvent ev) {
+		Object result = ev.getData();
+		//TODO 
+		Log.printLine(CloudSim.clock()+ "Cloulet ");
+		
 	}
 	
 	/**
