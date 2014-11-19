@@ -556,6 +556,7 @@ public class DatacenterBroker extends SimEntity {
 	 */
 	protected void processReturnEstimateFromParner(SimEvent ev) {
 		Log.printLine(CloudSim.clock() + ": " + getName() + ": Received estimate result from Broker #" + ev.getSource());
+		Log.printLine(ev.getData() instanceof Cloudlet);
 		ResCloudlet rCl =(ResCloudlet) ev.getData();
 		Integer clouletId = rCl.getCloudletId();
 		Integer partnerId = rCl.getUserId();
