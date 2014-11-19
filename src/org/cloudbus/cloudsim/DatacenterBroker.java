@@ -371,7 +371,7 @@ public class DatacenterBroker extends SimEntity {
 		for (Vm vm : getVmList()) {
 			if (!getVmsToDatacentersMap().containsKey(vm.getId())) {
 				Log.printLine(CloudSim.clock() + ": " + getName() + ": Trying to Create VM #" + vm.getId()
-						+ " in " + datacenterName);
+						+ " in " + datacenterName + "#" + datacenterId);
 				sendNow(datacenterId, CloudSimTags.VM_CREATE_ACK, vm);
 				requestedVms++;
 			}
@@ -397,6 +397,7 @@ public class DatacenterBroker extends SimEntity {
 			if (cloudlet.getVmId() == -1) {
 				vm = getVmsCreatedList().get(vmIndex);
 			} else { // submit to the specific vm
+				Log.printLine("DEBUG cloudlet.getVmId(): "+cloudlet.getVmId() );
 				vm = VmList.getById(getVmsCreatedList(), cloudlet.getVmId());
 				if (vm == null) { // vm was not created
 					Log.printLine(CloudSim.clock() + ": " + getName() + ": Postponing execution of cloudlet "
@@ -533,13 +534,13 @@ public class DatacenterBroker extends SimEntity {
 		//if process is require estimate in partners
 		if(cl.getStatus() == Cloudlet.PARTNER_SUBMMITED ){
 			if(getDatacenterIdsList().size() == 1 && getBrokerIdsList().get(0) == getId()){
-				Log.printLine("No parner found, can not send task anywhere");
+				Log.printLine(CloudSim.clock()+ ": "+ getName()+": #"+ getId()+": No parner found, can not send task anywhere");
 			}
 			ResCloudlet rCl = new ResCloudlet(cl); 
 			List<Integer> partnerIdsList  = new ArrayList<Integer>();
 			for( Integer partnerIds : this.getBrokerIdsList()){
 				if(partnerIds != getId()){
-					Log.printLine("Cloundlet #"+ cl.getCloudletId()+ "have send to broker #"+partnerIds);
+					Log.printLine(CloudSim.clock()+ ": "+ getName()+": #"+ getId() +" Cloundlet #"+ cl.getCloudletId()+ "have been send to broker #"+partnerIds);
 					//send to partner
 					send(partnerIds, 0, CloudSimTags.PARTNER_ESTIMATE, cl);
 					//add to requested list

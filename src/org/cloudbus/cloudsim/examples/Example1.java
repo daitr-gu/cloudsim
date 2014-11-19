@@ -172,6 +172,9 @@ public class Example1 {
 			// Final step: Print results when simulation is over
 			List<Cloudlet> newList = hcmutBroker.getCloudletReceivedList();
 			printCloudletList(newList);
+			
+			List<Cloudlet> newList1 = hcmusBroker.getCloudletReceivedList();
+			printCloudletList(newList1);
 
 			Log.printLine("CloudSimExample1 finished!");
 		} catch (Exception e) {
