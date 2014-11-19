@@ -33,7 +33,8 @@ public class Example1 {
 	/** The cloudlet list. */
 	private static List<Cloudlet> cloudletList;
 	/** The vmlist. */
-	private static List<Vm> vmlist;
+	private static List<Vm> hcmutVmlist;
+	private static List<Vm> hcmusVmlist;
 
 	/**
 	 * Creates main() to run this example.
@@ -97,14 +98,15 @@ public class Example1 {
 			Datacenter datacenter1 = createDatacenter("Datacenter_1");
 
 			// Third step: Create Broker
-			DatacenterBroker hcmutBroker = createBroker("HCMUT");
+			DatacenterBroker hcmutBroker = createBroker("HCMUT_BROKER");
 			int hcmutBrokerId = hcmutBroker.getId();
 			
-			DatacenterBroker hcmusBroker = createBroker("HCMUS");
+			DatacenterBroker hcmusBroker = createBroker("HCMUS_BROKER");
 			int hcmusBrokerId = hcmusBroker.getId();
 
 			// Fourth step: Create one virtual machine
-			vmlist = new ArrayList<Vm>();
+			hcmutVmlist = new ArrayList<Vm>();
+			hcmusVmlist = new ArrayList<Vm>();
 
 			// VM description
 			int vmid = 0;
@@ -120,10 +122,16 @@ public class Example1 {
 					new CloudletSchedulerSpaceShared());
 
 			// add the VM to the vmList
-			vmlist.add(vm);
+			hcmusVmlist.add(vm);
+			
+			Vm vm1 = new Vm(vmid + 1, hcmutBrokerId, mips, pesNumber, ram, bw, size, vmm,
+					new CloudletSchedulerSpaceShared());
+			
+			hcmutVmlist.add(vm1);
 
 			// submit vm list to the broker
-			hcmusBroker.submitVmList(vmlist);
+			hcmusBroker.submitVmList(hcmusVmlist);
+			hcmutBroker.submitVmList(hcmutVmlist);
 
 			// Fifth step: Create one Cloudlet
 			cloudletList = new ArrayList<Cloudlet>();
@@ -138,14 +146,14 @@ public class Example1 {
 			Cloudlet cloudlet = new Cloudlet(id, length, pesNumber, fileSize,
 					outputSize, utilizationModel, utilizationModel,
 					utilizationModel);
-			cloudlet.setUserId(hcmutBrokerId);
+			cloudlet.setUserId(hcmusBrokerId);
 			cloudlet.setVmId(vmid);
 			
-			Cloudlet cloudlet1 = new Cloudlet(id, length, pesNumber, fileSize,
+			Cloudlet cloudlet1 = new Cloudlet(id + 1, length, pesNumber, fileSize,
 					outputSize, utilizationModel, utilizationModel,
 					utilizationModel);
-			cloudlet1.setUserId(hcmutBrokerId);
-			cloudlet1.setVmId(vmid);
+			cloudlet1.setUserId(hcmusBrokerId);
+			cloudlet1.setVmId(vmid + 1);
 
 			
 			
@@ -154,7 +162,7 @@ public class Example1 {
 			cloudletList.add(cloudlet1);
 			
 			// submit cloudlet list to the broker
-			hcmutBroker.submitCloudletList(cloudletList);
+			hcmusBroker.submitCloudletList(cloudletList);
 
 			// Sixth step: Starts the simulation
 			CloudSim.startSimulation();
