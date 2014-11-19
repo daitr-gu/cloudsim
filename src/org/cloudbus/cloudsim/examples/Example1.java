@@ -94,10 +94,14 @@ public class Example1 {
 			// Datacenters are the resource providers in CloudSim. We need at
 			// list one of them to run a CloudSim simulation
 			Datacenter datacenter0 = createDatacenter("Datacenter_0");
+			Datacenter datacenter1 = createDatacenter("Datacenter_1");
 
 			// Third step: Create Broker
-			DatacenterBroker broker = createBroker();
-			int brokerId = broker.getId();
+			DatacenterBroker hcmutBroker = createBroker("HCMUT");
+			int hcmutBrokerId = hcmutBroker.getId();
+			
+			DatacenterBroker hcmusBroker = createBroker("HCMUS");
+			int hcmusBrokerId = hcmusBroker.getId();
 
 			// Fourth step: Create one virtual machine
 			vmlist = new ArrayList<Vm>();
@@ -112,14 +116,14 @@ public class Example1 {
 			String vmm = "Xen"; // VMM name
 
 			// create VM
-			Vm vm = new Vm(vmid, brokerId, mips, pesNumber, ram, bw, size, vmm,
+			Vm vm = new Vm(vmid, hcmusBrokerId, mips, pesNumber, ram, bw, size, vmm,
 					new CloudletSchedulerSpaceShared());
 
 			// add the VM to the vmList
 			vmlist.add(vm);
 
 			// submit vm list to the broker
-			broker.submitVmList(vmlist);
+			hcmusBroker.submitVmList(vmlist);
 
 			// Fifth step: Create one Cloudlet
 			cloudletList = new ArrayList<Cloudlet>();
@@ -134,13 +138,13 @@ public class Example1 {
 			Cloudlet cloudlet = new Cloudlet(id, length, pesNumber, fileSize,
 					outputSize, utilizationModel, utilizationModel,
 					utilizationModel);
-			cloudlet.setUserId(brokerId);
+			cloudlet.setUserId(hcmutBrokerId);
 			cloudlet.setVmId(vmid);
 			
 			Cloudlet cloudlet1 = new Cloudlet(id, length, pesNumber, fileSize,
 					outputSize, utilizationModel, utilizationModel,
 					utilizationModel);
-			cloudlet1.setUserId(brokerId);
+			cloudlet1.setUserId(hcmutBrokerId);
 			cloudlet1.setVmId(vmid);
 
 			
@@ -150,7 +154,7 @@ public class Example1 {
 			cloudletList.add(cloudlet1);
 			
 			// submit cloudlet list to the broker
-			broker.submitCloudletList(cloudletList);
+			hcmutBroker.submitCloudletList(cloudletList);
 
 			// Sixth step: Starts the simulation
 			CloudSim.startSimulation();
@@ -158,7 +162,7 @@ public class Example1 {
 			CloudSim.stopSimulation();
 
 			// Final step: Print results when simulation is over
-			List<Cloudlet> newList = broker.getCloudletReceivedList();
+			List<Cloudlet> newList = hcmutBroker.getCloudletReceivedList();
 			printCloudletList(newList);
 
 			Log.printLine("CloudSimExample1 finished!");
@@ -250,10 +254,10 @@ public class Example1 {
 	 *
 	 * @return the datacenter broker
 	 */
-	private static DatacenterBroker createBroker() {
+	private static DatacenterBroker createBroker(String name) {
 		DatacenterBroker broker = null;
 		try {
-			broker = new DatacenterBroker("Broker");
+			broker = new DatacenterBroker(name);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
