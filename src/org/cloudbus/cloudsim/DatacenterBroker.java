@@ -14,8 +14,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import javax.swing.text.StyledEditorKit.BoldAction;
-
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.CloudSimTags;
 import org.cloudbus.cloudsim.core.SimEntity;
@@ -62,6 +60,9 @@ public class DatacenterBroker extends SimEntity {
 
 	/** The datacenter ids list. */
 	protected List<Integer> datacenterIdsList;
+	
+	/** The temp datacenter ids list. */
+	protected List<Integer> tmpDatacenterIdsList;
 
 	/** The datacenter requested ids list. */
 	protected List<Integer> datacenterRequestedIdsList;
@@ -109,6 +110,7 @@ public class DatacenterBroker extends SimEntity {
 		setVmsDestroyed(0);
 
 		setDatacenterIdsList(new LinkedList<Integer>());
+		setTmpDatacenterIdsList(new ArrayList<Integer>());
 		setDatacenterRequestedIdsList(new ArrayList<Integer>());
 		setVmsToDatacentersMap(new HashMap<Integer, Integer>());
 		setDatacenterCharacteristicsList(new HashMap<Integer, DatacenterCharacteristics>());
@@ -252,7 +254,8 @@ public class DatacenterBroker extends SimEntity {
 	 * @post $none
 	 */
 	protected void processResourceCharacteristicsRequest(SimEvent ev) {
-		setDatacenterIdsList(CloudSim.getCloudResourceList());
+//		setDatacenterIdsList(CloudSim.getCloudResourceList());
+		setDatacenterIdsList(getTmpDatacenterIdsList());
 		setDatacenterCharacteristicsList(new HashMap<Integer, DatacenterCharacteristics>());
 		Log.printLine("CloudSim.getBrokerIdsList: "+CloudSim.getBrokerIdsList());
 		setBrokerIdsList(CloudSim.getBrokerIdsList());
@@ -395,6 +398,10 @@ public class DatacenterBroker extends SimEntity {
 	 * @post $none
 	 */
 	protected void submitCloudlets() {
+		Log.printLine(this.getName() + " submit Cloudlet");
+		for (Integer i : getDatacenterIdsList()) {
+			Log.printLine(i);
+		}
 		int vmIndex = 0;
 		for (Cloudlet cloudlet : getCloudletList()) {
 			Vm vm;
@@ -867,6 +874,18 @@ public class DatacenterBroker extends SimEntity {
 	 */
 	protected List<Integer> getDatacenterRequestedIdsList() {
 		return datacenterRequestedIdsList;
+	}
+	
+	public void addDatacenter(Integer datacenterId) {
+		getTmpDatacenterIdsList().add(datacenterId);
+	}
+	
+	public void setTmpDatacenterIdsList(List<Integer> tmpDatacenterIdsList) {
+		this.tmpDatacenterIdsList = tmpDatacenterIdsList;
+	}
+	
+	public List<Integer> getTmpDatacenterIdsList() {
+		return this.tmpDatacenterIdsList;
 	}
 
 	/**

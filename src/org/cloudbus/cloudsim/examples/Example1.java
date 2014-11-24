@@ -1,5 +1,6 @@
 package org.cloudbus.cloudsim.examples;
 
+import java.io.FileReader;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -24,17 +25,17 @@ import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.provisioners.BwProvisionerSimple;
 import org.cloudbus.cloudsim.provisioners.PeProvisionerSimple;
 import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 /**
  * A simple example showing how to create a data center with one host and run
  * one cloudlet on it.
  */
 public class Example1 {
-	/** The cloudlet list. */
-	private static List<Cloudlet> cloudletList;
-	/** The vmlist. */
-	private static List<Vm> hcmutVmlist;
-	private static List<Vm> hcmusVmlist;
+	
+	private static final String filePath = "C:\\Users\\Kahn\\Desktop\\testcase.json";
 
 	/**
 	 * Creates main() to run this example.
@@ -47,8 +48,6 @@ public class Example1 {
 		Log.printLine("Starting CloudSimExample1...");
 
 		try {
-			// First step: Initialize the CloudSim package. It should be called
-			// before creating any entities.
 			int num_user = 1; // number of cloud users
 			Calendar calendar = Calendar.getInstance(); // Calendar whose fields
 														// have been initialized
@@ -56,131 +55,163 @@ public class Example1 {
 														// and time.
 			boolean trace_flag = false; // trace events
 
-			/*
-			 * Comment Start - Dinesh Bhagwat Initialize the CloudSim library.
-			 * init() invokes initCommonVariable() which in turn calls
-			 * initialize() (all these 3 methods are defined in CloudSim.java).
-			 * initialize() creates two collections - an ArrayList of SimEntity
-			 * Objects (named entities which denote the simulation entities) and
-			 * a LinkedHashMap (named entitiesByName which denote the
-			 * LinkedHashMap of the same simulation entities), with name of
-			 * every SimEntity as the key. initialize() creates two queues - a
-			 * Queue of SimEvents (future) and another Queue of SimEvents
-			 * (deferred). initialize() creates a HashMap of of Predicates (with
-			 * integers as keys) - these predicates are used to select a
-			 * particular event from the deferred queue. initialize() sets the
-			 * simulation clock to 0 and running (a boolean flag) to false. Once
-			 * initialize() returns (note that we are in method
-			 * initCommonVariable() now), a CloudSimShutDown (which is derived
-			 * from SimEntity) instance is created (with numuser as 1, its name
-			 * as CloudSimShutDown, id as -1, and state as RUNNABLE). Then this
-			 * new entity is added to the simulation While being added to the
-			 * simulation, its id changes to 0 (from the earlier -1). The two
-			 * collections - entities and entitiesByName are updated with this
-			 * SimEntity. the shutdownId (whose default value was -1) is 0 Once
-			 * initCommonVariable() returns (note that we are in method init()
-			 * now), a CloudInformationService (which is also derived from
-			 * SimEntity) instance is created (with its name as
-			 * CloudInformatinService, id as -1, and state as RUNNABLE). Then
-			 * this new entity is also added to the simulation. While being
-			 * added to the simulation, the id of the SimEntitiy is changed to 1
-			 * (which is the next id) from its earlier value of -1. The two
-			 * collections - entities and entitiesByName are updated with this
-			 * SimEntity. the cisId(whose default value is -1) is 1 Comment End
-			 * - Dinesh Bhagwat
-			 */
 			CloudSim.init(num_user, calendar, trace_flag);
-
-			// Second step: Create Datacenters
-			// Datacenters are the resource providers in CloudSim. We need at
-			// list one of them to run a CloudSim simulation
-			Datacenter datacenter0 = createDatacenter("Datacenter_0");
-			Datacenter datacenter1 = createDatacenter("Datacenter_1");
-
-			// Third step: Create Broker
-			DatacenterBroker hcmutBroker = createBroker("HCMUT_BROKER");
-			int hcmutBrokerId = hcmutBroker.getId();
-			
-			DatacenterBroker hcmusBroker = createBroker("HCMUS_BROKER");
-			int hcmusBrokerId = hcmusBroker.getId();
-
-			// Fourth step: Create one virtual machine
-			hcmutVmlist = new ArrayList<Vm>();
-			hcmusVmlist = new ArrayList<Vm>();
-
-			// VM description
-			int vmid = 0;
-			int mips = 1000;
-			long size = 10000; // image size (MB)
-			int ram = 512; // vm memory (MB)
-			long bw = 1000;
-			int pesNumber = 1; // number of cpus
-			String vmm = "Xen"; // VMM name
-
-			// create VM
-			Vm vm = new Vm(vmid, hcmusBrokerId, mips, pesNumber, ram, bw, size, vmm,
-					new CloudletSchedulerSpaceShared());
-
-			// add the VM to the vmList
-			hcmusVmlist.add(vm);
-			
-			Vm vm1 = new Vm(vmid + 1, hcmutBrokerId, mips, pesNumber, ram, bw, size, vmm,
-					new CloudletSchedulerSpaceShared());
-			
-			hcmutVmlist.add(vm1);
-
-			// submit vm list to the broker
-			hcmusBroker.submitVmList(hcmusVmlist);
-			hcmutBroker.submitVmList(hcmutVmlist);
-
-			// Fifth step: Create one Cloudlet
-			cloudletList = new ArrayList<Cloudlet>();
-
-			// Cloudlet properties
-			int id = 0;
-			long length = 400000;
-			long fileSize = 300;
-			long outputSize = 300;
-			UtilizationModel utilizationModel = new UtilizationModelFull();
-
-			Cloudlet cloudlet = new Cloudlet(id, length, pesNumber, fileSize,
-					outputSize, utilizationModel, utilizationModel,
-					utilizationModel);
-			cloudlet.setUserId(hcmusBrokerId);
-			cloudlet.setVmId(vmid);
-			
-			Cloudlet cloudlet1 = new Cloudlet(id + 1, length, pesNumber, fileSize,
-					outputSize, utilizationModel, utilizationModel,
-					utilizationModel);
-			cloudlet1.setUserId(hcmusBrokerId);
-			cloudlet1.setVmId(vmid);
-
 			
 			
-			// add the cloudlet to the list
-			cloudletList.add(cloudlet);
-			cloudletList.add(cloudlet1);
-			
-			// submit cloudlet list to the broker
-			hcmusBroker.submitCloudletList(cloudletList);
+			// Read data from json file
+			FileReader reader = new FileReader(filePath);
 
-			// Sixth step: Starts the simulation
+            JSONParser jsonParser = new JSONParser();
+            JSONArray members = (JSONArray) jsonParser.parse(reader);
+            
+            // Create Datacenterbrokers
+            for (int i = 0; i < members.size(); i++) {
+            	JSONObject member = (JSONObject) members.get(i);
+            	
+            	String m_name = (String) member.get("name");
+            	Log.printLine(m_name);
+            	DatacenterBroker broker = createBroker(m_name);
+            	
+            	List<Vm> vmList = new ArrayList<Vm>();
+            	List<Cloudlet> cloudletList = new ArrayList<Cloudlet>();
+            	
+            	// Cretae datacenters
+            	JSONArray m_datacenters = (JSONArray) member.get("datacenters");
+            	for (int j = 0; j < m_datacenters.size(); j++) {
+            		JSONObject m_datacenter = (JSONObject) m_datacenters.get(j);
+            		Datacenter datacenter = createDatacenter(m_datacenter, broker);
+            		
+            		// Create vms
+                	JSONArray m_vms = (JSONArray) m_datacenter.get("vms");
+                	if (m_vms != null) {
+    	            	for (int k = 0; k < m_vms.size(); k++) {
+    	            		JSONObject m_vm = (JSONObject) m_vms.get(k);
+    	            		Vm vm = createVirtualMachine(vmList.size(), m_vm, broker);
+    	            		vmList.add(vm);
+    	            	}
+                	}
+            	}
+            	broker.submitVmList(vmList);
+            	
+            	JSONArray m_cloudlets = (JSONArray) member.get("cloudlets");
+            	if (m_cloudlets == null) {
+            		Log.printLine(broker.getName() + ": There is no cloudlet");
+            		continue;
+            	}
+            	
+            	int totalVms = vmList.size();
+            	if (totalVms <= 0) {
+            		Log.printLine(broker.getName() + ": There is no vm => can not submit cloudlet.");
+            		continue;
+            	}
+            	
+            	for (int j = 0; j < m_cloudlets.size(); j++) {
+            		int selectedVm = j % totalVms;
+            		JSONObject m_cloudlet = (JSONObject) m_cloudlets.get(j);
+            		long length = (Long) m_cloudlet.get("long");
+            		long fileSize = (Long) m_cloudlet.get("fileSize");
+            		long outputSize = (Long) m_cloudlet.get("outputSize");
+            		int pesNumber = ((Long) m_cloudlet.get("pesNumber")).intValue();
+            		
+            		UtilizationModel utilizationModel = new UtilizationModelFull();
+            		
+            		Cloudlet cloudlet = new Cloudlet(j, length, pesNumber, fileSize, outputSize, 
+            				utilizationModel, utilizationModel, utilizationModel);
+            		
+            		cloudlet.setUserId(broker.getId());
+            		cloudlet.setVmId(selectedVm);
+            		
+            		cloudletList.add(cloudlet);
+            	}
+
+            	broker.submitCloudletList(cloudletList);
+            }
+            
 			CloudSim.startSimulation();
 
 			CloudSim.stopSimulation();
 
 			// Final step: Print results when simulation is over
-			List<Cloudlet> newList = hcmutBroker.getCloudletReceivedList();
-			printCloudletList(newList);
+//			List<Cloudlet> newList = hcmutBroker.getCloudletReceivedList();
+//			printCloudletList(newList);
 			
-			List<Cloudlet> newList1 = hcmusBroker.getCloudletReceivedList();
-			printCloudletList(newList1);
+//			List<Cloudlet> newList1 = hcmusBroker.getCloudletReceivedList();
+//			printCloudletList(newList1);
 
 			Log.printLine("CloudSimExample1 finished!");
 		} catch (Exception e) {
 			e.printStackTrace();
 			Log.printLine("Unwanted errors happen");
 		}
+	}
+	
+	private static Vm createVirtualMachine(int vmId, JSONObject v_info, DatacenterBroker broker) {
+		int mips = ((Long) v_info.get("mips")).intValue();
+		long size = (Long) v_info.get("size"); // image size (MB)
+		int ram = ((Long) v_info.get("ram")).intValue(); // vm memory (MB)
+		long bw = (Long) v_info.get("bw");
+		int pesNumber = ((Long) v_info.get("pesNumber")).intValue(); // number of cpus
+		String vmm = "Xen"; // VMM name
+
+		// create VM
+		Vm vm = new Vm(vmId, broker.getId(), mips, pesNumber, ram, bw, size, vmm,
+				new CloudletSchedulerSpaceShared());
+		
+		return vm;
+	}
+	
+	private static Datacenter createDatacenter(JSONObject d_info, DatacenterBroker broker) {
+		String name = broker.getName() + "---" + (String) d_info.get("name");
+		Log.printLine(name);
+		
+		List<Host> hostList = new ArrayList<Host>();
+		
+		JSONArray hosts = (JSONArray) d_info.get("hosts");
+		for (int i = 0; i < hosts.size(); i++) {
+			JSONObject host = (JSONObject) hosts.get(i);
+			
+			int ram = ((Long) host.get("ram")).intValue();
+			long storage = (Long) host.get("storage");
+			int bw = ((Long) host.get("bw")).intValue();
+			
+			JSONArray pes = (JSONArray) host.get("pes");
+			List<Pe> peList = new ArrayList<Pe>();
+			for (int j = 0; j < pes.size(); j++) {
+				long mips = (Long) pes.get(j);
+				peList.add(new Pe(j, new PeProvisionerSimple(mips)));
+			}
+			
+			hostList.add(new Host(i, new RamProvisionerSimple(ram), new BwProvisionerSimple(bw), 
+					storage , peList, new VmSchedulerTimeShared(peList)));
+		}
+		
+		String arch = (String) d_info.get("arch");
+		String os = (String) d_info.get("os");
+		String vmm = (String) d_info.get("vmm");
+		double time_zone = (double) d_info.get("time_zone");
+		double cost = (double) d_info.get("cost");
+		double costPerMem = (double) d_info.get("costPerMem");
+		double costPerStorage = (double) d_info.get("costPerStorage");
+		double costPerBw = (double) d_info.get("costPerBw");
+		
+		LinkedList<Storage> storageList = new LinkedList<Storage>();
+		
+		DatacenterCharacteristics characteristics = new DatacenterCharacteristics(
+				arch, os, vmm, hostList, time_zone, cost, costPerMem,
+				costPerStorage, costPerBw);
+
+		// 6. Finally, we need to create a PowerDatacenter object.
+		Datacenter datacenter = null;
+		try {
+			datacenter = new Datacenter(name, characteristics,
+					new VmAllocationPolicySimple(hostList), storageList, 0);
+			
+			broker.addDatacenter(datacenter.getId());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return datacenter;
 	}
 
 	/**
@@ -191,7 +222,7 @@ public class Example1 {
 	 *
 	 * @return the datacenter
 	 */
-	private static Datacenter createDatacenter(String name) {
+	private static Datacenter createDatacenter(String name, DatacenterBroker broker) {
 
 		// Here are the steps needed to create a PowerDatacenter:
 		// 1. We need to create a list to store
@@ -250,6 +281,8 @@ public class Example1 {
 		try {
 			datacenter = new Datacenter(name, characteristics,
 					new VmAllocationPolicySimple(hostList), storageList, 0);
+			
+			broker.addDatacenter(datacenter.getId());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
