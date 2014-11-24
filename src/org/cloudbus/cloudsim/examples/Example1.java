@@ -35,7 +35,9 @@ import org.json.simple.parser.JSONParser;
  */
 public class Example1 {
 	
-	private static final String filePath = "C:\\Users\\Kahn\\Desktop\\testcase.json";
+	private static final String filePath = "/home/ngtrieuvi92/zz/cloudsim/src/org/cloudbus/cloudsim/examples/testcase.json";
+	
+	private static List<DatacenterBroker> brokersList;
 
 	/**
 	 * Creates main() to run this example.
@@ -46,6 +48,7 @@ public class Example1 {
 	@SuppressWarnings("unused")
 	public static void main(String[] args) {
 		Log.printLine("Starting CloudSimExample1...");
+		brokersList = new ArrayList<DatacenterBroker>();
 
 		try {
 			int num_user = 1; // number of cloud users
@@ -71,6 +74,7 @@ public class Example1 {
             	String m_name = (String) member.get("name");
             	Log.printLine(m_name);
             	DatacenterBroker broker = createBroker(m_name);
+            	brokersList.add(broker);
             	
             	List<Vm> vmList = new ArrayList<Vm>();
             	List<Cloudlet> cloudletList = new ArrayList<Cloudlet>();
@@ -137,6 +141,13 @@ public class Example1 {
 			
 //			List<Cloudlet> newList1 = hcmusBroker.getCloudletReceivedList();
 //			printCloudletList(newList1);
+			
+			for (DatacenterBroker broker : brokersList) {
+				List<Cloudlet> newList = broker.getCloudletReceivedList();
+				printCloudletList(newList);
+			}
+				
+		
 
 			Log.printLine("CloudSimExample1 finished!");
 		} catch (Exception e) {
