@@ -17,6 +17,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.cloudbus.cloudsim.DatacenterBroker;
 import org.cloudbus.cloudsim.Log;
 import org.cloudbus.cloudsim.core.predicates.Predicate;
 import org.cloudbus.cloudsim.core.predicates.PredicateAny;
@@ -976,7 +977,7 @@ public class CloudSim {
 		List<Integer> brokerIdsList = new ArrayList<Integer>();
 		String borkerName  = "Broker";
 		for(SimEntity en: entities){
-			if (en.getName().toLowerCase().indexOf(borkerName.toLowerCase()) != -1 ) {
+			if (en instanceof DatacenterBroker ) {
 				brokerIdsList.add(en.getId());
 			}
 		}
