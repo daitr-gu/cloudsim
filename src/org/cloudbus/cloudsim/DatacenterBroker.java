@@ -21,6 +21,8 @@ import org.cloudbus.cloudsim.core.SimEvent;
 import org.cloudbus.cloudsim.lists.CloudletList;
 import org.cloudbus.cloudsim.lists.VmList;
 
+import sun.misc.FpUtils;
+
 /**
  * DatacentreBroker represents a broker acting on behalf of a user. It hides VM management, as vm
  * creation, sumbission of cloudlets to this VMs and destruction of VMs.
@@ -30,7 +32,7 @@ import org.cloudbus.cloudsim.lists.VmList;
  * @since CloudSim Toolkit 1.0
  */
 public class DatacenterBroker extends SimEntity {
-
+	
 	/** The vm list. */
 	protected List<? extends Vm> vmList;
 
@@ -82,9 +84,11 @@ public class DatacenterBroker extends SimEntity {
 	/** The estimate cloulet list of partner */
 	
 	protected Map<Integer,EstimationCloudletOfPartner> estimateCloudletofParnerMap;
-
-
 	
+	protected List<? extends Cloudlet> cloudletEstimating;
+	
+	protected List<? extends Cloudlet> cloudletWaitingForEstimate;
+
 
 	/**
 	 * Created a new DatacenterBroker object.
@@ -222,11 +226,23 @@ public class DatacenterBroker extends SimEntity {
 			case CloudSimTags.PARTNER_EXEC_RETURN: 
 				processPartnerExecReturn(ev);
 				break;
+			//if not partner is not exec on this broker
+			case CloudSimTags.CANCEL_PARTNER_WAITING_EXEC:
+				processPartnerCancelWaitingExec(ev);
+				break;
 			// other unknown tags are processed by this method
 			default:
 				processOtherEvent(ev);
 				break;
 		}
+	}
+
+	private void processPartnerCancelWaitingExec(SimEvent ev) {
+		ResCloudlet rCl = (ResCloudlet) ev.getData();	
+		Log.printLine(CloudSim.clock() + ": " + getName() + ": Received partner cancel waiting exec cloudlet from Broker #" + ev.getSource());
+		int vmId = rCl.getCloudlet().getVmId();
+		
+		sendNow(getVmsToDatacentersMap().get(vmId), CloudSimTags.CANCEL_WAITING_EXEC_CLOUDLET_FROM_VM, rCl);
 	}
 
 	/**
@@ -257,7 +273,7 @@ public class DatacenterBroker extends SimEntity {
 //		setDatacenterIdsList(CloudSim.getCloudResourceList());
 		setDatacenterIdsList(getTmpDatacenterIdsList());
 		setDatacenterCharacteristicsList(new HashMap<Integer, DatacenterCharacteristics>());
-		Log.printLine("CloudSim.getBrokerIdsList: "+CloudSim.getBrokerIdsList());
+		Log.printLine(CloudSim.clock()+ " " + getName()+ " BrokerIdsList: "+CloudSim.getBrokerIdsList());
 		setBrokerIdsList(CloudSim.getBrokerIdsList());
 
 		Log.printLine(CloudSim.clock() + ": " + getName() + ": Cloud Resource List received with "
@@ -399,17 +415,15 @@ public class DatacenterBroker extends SimEntity {
 	 */
 	protected void submitCloudlets() {
 		Log.printLine(this.getName() + " submit Cloudlet");
-		for (Integer i : getDatacenterIdsList()) {
-			Log.printLine(i);
-		}
 		int vmIndex = 0;
 		for (Cloudlet cloudlet : getCloudletList()) {
 			Vm vm;
+			
+			vm = getFirstVmCanExecute(cloudlet);
 			// if user didn't bind this cloudlet and it has not been executed yet
 			if (cloudlet.getVmId() == -1) {
 				vm = getVmsCreatedList().get(vmIndex);
 			} else { // submit to the specific vm
-//				Log.printLine("DEBUG cloudlet.getVmId(): "+cloudlet.getVmId() );
 				vm = VmList.getById(getVmsCreatedList(), cloudlet.getVmId());
 				if (vm == null) { // vm was not created
 					Log.printLine(CloudSim.clock() + ": " + getName() + ": Postponing execution of cloudlet "
@@ -417,7 +431,7 @@ public class DatacenterBroker extends SimEntity {
 					continue;
 				}
 			}
-
+			
 			Log.printLine(CloudSim.clock() + ": " + getName() + ": Sending cloudlet "
 					+ cloudlet.getCloudletId() + " to VM #" + vm.getId());
 			cloudlet.setVmId(vm.getId());
@@ -435,6 +449,10 @@ public class DatacenterBroker extends SimEntity {
 		}
 	}
 	
+	private Vm getFirstVmCanExecute(Cloudlet cloudlet) {
+		return null;
+	}
+
 	protected void processPartnerCloudletEstimate(SimEvent ev) {
 		Log.printLine(CloudSim.clock() + ": " + getName() + ": Received partner estimate cloudlet.");
 		
@@ -468,8 +486,8 @@ public class DatacenterBroker extends SimEntity {
 	protected void processPartnerCloudletInternalEstimateReturn(SimEvent ev) {
 		Log.printLine(CloudSim.clock() + ": " + getName() + ": Received internal estimate from datacenter #" 
 						+ ev.getSource());
-		
 		Object[] data = (Object[]) ev.getData();
+		Boolean result = (Boolean)data[2];
 		int partnerID = (int)data[0];
 		ResCloudlet resCloudlet = (ResCloudlet) data[1];
 		int cloudletID = resCloudlet.getCloudlet().getCloudletId();
@@ -478,12 +496,13 @@ public class DatacenterBroker extends SimEntity {
 		
 		if (partnerCloudletList.containsKey(cloudletID)) {
 			EstimationCloudletObserve eco = partnerCloudletList.get(cloudletID);
-			
-			eco.receiveEstimateResult(ev.getSource(), resCloudlet);
+			int datacenterCancelExecId = eco.receiveEstimateResult(ev.getSource(), resCloudlet,result);
+			if(datacenterCancelExecId != -1 ){
+				sendNow(datacenterCancelExecId, CloudSimTags.CANCEL_WAITING_EXEC_CLOUDLET_FROM_VM,resCloudlet );
+			}
 			if (eco.isFinished()) {
 				// send result to partner
 				sendNow(partnerID, CloudSimTags.PARTNER_ESTIMATE_RETURN, eco.getResCloudlet());
-				
 				// remove partner estimation cloudlet 
 				partnerCloudletList.remove(cloudletID);
 			}
@@ -531,12 +550,9 @@ public class DatacenterBroker extends SimEntity {
 		int result = (int)data[1];
 		String msg = (String)data[2];
 		Cloudlet cl = (Cloudlet)data[3];
-		
 		Object[] returnData = { result, msg, cl };
-		
 		sendNow(partnerId, CloudSimTags.PARTNER_EXEC_RETURN, returnData);
 	}
-	
 	private void processPartnerExecReturn(SimEvent ev) {
 		//TODO
 		Log.printLine(CloudSim.clock()+ " Partner returned exec result");
@@ -559,17 +575,14 @@ public class DatacenterBroker extends SimEntity {
 	 * @param ev
 	 */
 	protected void processSentTaskToPartnerEstimate(SimEvent ev) {
+		
 		Cloudlet cl = (Cloudlet) ev.getData();
 		//if process is require estimate in partners
-		if(cl.getStatus() == Cloudlet.PARTNER_SUBMMITED ){
-			if(getDatacenterIdsList().size() == 1 && getBrokerIdsList().get(0) == getId()){
-				Log.printLine(CloudSim.clock()+ ": "+ getName()+": #"+ getId()+": No parner found, can not send task anywhere");
-			}
 			ResCloudlet rCl = new ResCloudlet(cl); 
 			List<Integer> partnerIdsList  = new ArrayList<Integer>();
 			for( Integer partnerIds : this.getBrokerIdsList()){
 				if(partnerIds != getId()){
-					Log.printLine(CloudSim.clock()+ ": "+ getName()+": #"+ getId() +" Cloundlet #"+ cl.getCloudletId()+ "have been send to broker #"+partnerIds);
+					Log.printLine(CloudSim.clock()+ ": "+ getName()+": #"+ getId() +" Cloudlet #"+ cl.getCloudletId()+ " have been send to broker #"+partnerIds);
 					//send to partner
 					send(partnerIds, 0, CloudSimTags.PARTNER_ESTIMATE, cl);
 					//add to requested list
@@ -578,7 +591,6 @@ public class DatacenterBroker extends SimEntity {
 			}
 			EstimationCloudletOfPartner esOfPatner = new EstimationCloudletOfPartner(rCl, partnerIdsList);
 			getEstimateCloudletofParnerMap().put(rCl.getCloudletId(), esOfPatner);
-		}
 	}
 	/**
 	 *  Process result estimate form partner ID 
@@ -586,18 +598,21 @@ public class DatacenterBroker extends SimEntity {
 	 * @param ev
 	 */
 	protected void processReturnEstimateFromParner(SimEvent ev) {
-		Log.printLine(CloudSim.clock() + ": " + getName() + ": Received estimate result from Broker #" + ev.getSource());
 		ResCloudlet rCl =(ResCloudlet) ev.getData();
 		Integer clouletId = rCl.getCloudletId();
 		Integer partnerId =  ev.getSource();
+		Log.printLine(CloudSim.clock() + ": " + getName() + ": Received estimate result from Broker #" + ev.getSource()+ " with estimate time: "+rCl.getClouddletFinishTime());
 		
 		EstimationCloudletOfPartner partnerCloudletEstimateList = getEstimateCloudletofParnerMap().get(clouletId);
 		if (partnerCloudletEstimateList.getPartnerIdsList().contains(partnerId)) {
-
-			partnerCloudletEstimateList.receiveEstimateResult(partnerId, rCl);			
+			int partnerCancelWaitingExec = partnerCloudletEstimateList.receiveEstimateResult(partnerId, rCl);
+			
+			if(partnerCancelWaitingExec != -1){
+				sendNow(partnerId, CloudSimTags.CANCEL_PARTNER_WAITING_EXEC, rCl);
+			}
 			if (partnerCloudletEstimateList.isFinished()) {
 				// send result to partner
-				sendNow(partnerId, CloudSimTags.PARTNER_EXEC, rCl.getCloudlet());
+				sendNow(partnerId, CloudSimTags.PARTNER_EXEC, partnerCloudletEstimateList.getResCloudlet().getCloudlet());
 			}
 		}
 	}

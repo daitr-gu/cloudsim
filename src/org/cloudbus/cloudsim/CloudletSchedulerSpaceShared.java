@@ -364,7 +364,7 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 	 * @post $none
 	 */
 	@Override
-	public double cloudletSubmit(Cloudlet cloudlet, double fileTransferTime) {
+	public double cloudletSubmit(Cloudlet cloudlet, double fileTransferTime, double estimatedFinishTime) {
 		// it can go to the exec list
 		if ((currentCpus - usedPes) >= cloudlet.getNumberOfPes()) {
 			ResCloudlet rcl = new ResCloudlet(cloudlet);
@@ -374,11 +374,12 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 			}
 			getCloudletExecList().add(rcl);
 			usedPes += cloudlet.getNumberOfPes();
-		} else {// no enough free PEs: go to the waiting queue
+		} else {
+			// no enough free PEs: go to the waiting queue
 			ResCloudlet rcl = new ResCloudlet(cloudlet);
-			rcl.setCloudletStatus(Cloudlet.PARTNER_SUBMMITED);
-//			getCloudletWaitingList().add(rcl);
-			getCloudletPartnerSubmittedList().add(rcl);
+			rcl.setCloudletStatus(Cloudlet.QUEUED);
+			getCloudletWaitingList().add(rcl);
+//			getCloudletPartnerSubmittedList().add(rcl);
 //			return 0.0;
 		}
 
@@ -427,9 +428,8 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 					cpus++;
 				}
 			}
-			
 			capacity /= cpus;
-
+			
 			// use the current capacity to estimate the extra amount of
 			// time to file transferring. It must be added to the cloudlet length
 			double extraSize = capacity * fileTransferTime;
@@ -448,7 +448,7 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 	 */
 	@Override
 	public double cloudletSubmit(Cloudlet cloudlet) {
-		return cloudletSubmit(cloudlet, 0.0);
+		return cloudletSubmit(cloudlet, 0.0,0);
 	}
 
 	/**
@@ -523,6 +523,36 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 		}
 		return null;
 	}
+	
+	
+	
+	/**
+	 * Informs about completion of some cloudlet in the VM managed by this scheduler.
+	 * 
+	 * @return $true if there is at least one finished cloudlet; $false otherwise
+	 * @pre $none
+	 * @post $none
+	 */
+	@Override
+	public boolean isFinishedEstimate() {
+		return getCloudletPartnerSubmittedList().size() > 0;
+	}
+
+	/**
+	 * Returns the next cloudlet in the finished list, $null if this list is empty.
+	 * 
+	 * @return a finished cloudlet
+	 * @pre $none
+	 * @post $none
+	 */
+	@Override
+	public Cloudlet getNextFinishedEstimate() {
+		if (getCloudletPartnerSubmittedList().size() > 0) {
+			return getCloudletPartnerSubmittedList().remove(0).getCloudlet();
+		}
+		return null;
+	}
+
 
 	/**
 	 * Returns the number of cloudlets runnning in the virtual machine.
@@ -719,4 +749,59 @@ public class CloudletSchedulerSpaceShared extends CloudletScheduler {
 		this.cloudletPartnerSubmittedList = cloudletPartnerSubmittedList;
 	}
 
+	@Override
+	public double estimateCloudletFinishTime(Cloudlet cloudlet,
+			double fileTransferTime) {
+		double result  = 0;
+		double finishTimeofExecQeue = updateVmProcessing(CloudSim.clock(), getCurrentMipsShare());
+		double finishTimeofWaitingQeue = calFinishTimeOfWatingQueue();
+//		if ((currentCpus - usedPes) >= cloudlet.getNumberOfPes()) {
+			// this Vm can process cloudlet
+			// calculate the expected time for cloudlet completion
+			double capacity = 0.0;
+			int cpus = 0;
+			for (Double mips : getCurrentMipsShare()) {
+				capacity += mips;
+				if (mips > 0) {
+					cpus++;
+				}
+			}
+			capacity /= cpus;
+			// use the current capacity to estimate the extra amount of
+			// time to file transferring. It must be added to the cloudlet length
+			double extraSize = capacity * fileTransferTime;
+			long length = cloudlet.getCloudletLength();
+			length += extraSize;
+			cloudlet.setCloudletLength(length);
+			double finish_time =  cloudlet.getCloudletLength() / capacity;
+			result = finish_time + finishTimeofExecQeue + finishTimeofWaitingQeue;
+//		} else {// no enough free PEs
+			return result;
+//		}
+	}
+	
+	private long calFinishTimeOfWatingQueue(){
+		long total_time = 0;
+		for (ResCloudlet resCloudlet : cloudletWaitingList) {
+			Cloudlet cl  = resCloudlet.getCloudlet(); 
+			long length = cl.getCloudletLength();
+			int numofPes = cl.getNumberOfPes();
+			
+			double capacity = 0.0;
+			int cpus = 0;
+			for (Double mips : getCurrentMipsShare()) {
+				capacity += mips;
+				if (mips > 0) {
+					cpus++;
+				}
+			}
+			capacity /= cpus;
+			total_time += length/capacity;
+		}
+		return total_time;
+	}
+	
+
+	
+	
 }

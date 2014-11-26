@@ -48,6 +48,8 @@ public class Datacenter extends SimEntity {
 
 	/** The vm list. */
 	private List<? extends Vm> vmList;
+	
+	
 
 	/** The scheduling interval. */
 	private double schedulingInterval;
@@ -249,17 +251,20 @@ public class Datacenter extends SimEntity {
 				updateCloudletProcessing();
 				checkCloudletCompletion();
 				break;
-				
-			case CloudSimTags.PARTNER_ESTIMATE:
-				processPartnerCloudletEstimate(ev);
+			case CloudSimTags.VM_DATACENTER_ESTIMATE_RETURN:
+				checkCloudletEstimateComplete();
 				break;
-				
+			case CloudSimTags.PARTNER_ESTIMATE:
+				processCloudletEstimate(ev);
+				break;
 			case CloudSimTags.PARTNER_EXEC:
 				processPartnerCloudlet(ev);
 				break;
-
 			case CloudSimTags.DATACENTER_SUBMIT_TO_PARTNER: 
 				processSubmmitToParner(ev);
+				break;
+			case CloudSimTags.CANCEL_WAITING_EXEC_CLOUDLET_FROM_VM:
+				processSubmitCancelWatingExec(ev);
 				break;
 			// other unknown tags are processed by this method
 			default:
@@ -267,6 +272,7 @@ public class Datacenter extends SimEntity {
 				break;
 		}
 	}
+
 
 	/**
 	 * submit cloudlet to another datacenter to estimate finish time 
@@ -448,9 +454,7 @@ public class Datacenter extends SimEntity {
 	 */
 	protected void processVmCreate(SimEvent ev, boolean ack) {
 		Vm vm = (Vm) ev.getData();
-
 		boolean result = getVmAllocationPolicy().allocateHostForVm(vm);
-
 		if (ack) {
 			int[] data = new int[3];
 			data[0] = getId();
@@ -666,7 +670,7 @@ public class Datacenter extends SimEntity {
 				} else {
 					// time to transfer the files
 					double fileTransferTime = predictFileTransferTime(cl.getRequiredFiles());
-					vm.getCloudletScheduler().cloudletSubmit(cl, fileTransferTime);
+					vm.getCloudletScheduler().cloudletSubmit(cl, fileTransferTime,0);
 				}
 			} else {// the cloudlet will migrate from one resource to another
 				int tag = ((type == CloudSimTags.CLOUDLET_MOVE_ACK) ? CloudSimTags.CLOUDLET_SUBMIT_ACK
@@ -697,8 +701,6 @@ public class Datacenter extends SimEntity {
 	 * @post $none
 	 */
 	protected void processCloudletSubmit(SimEvent ev, boolean ack) {
-		updateCloudletProcessing();
-
 		try {
 			// gets the Cloudlet object
 			Cloudlet cl = (Cloudlet) ev.getData();
@@ -728,7 +730,6 @@ public class Datacenter extends SimEntity {
 				}
 
 				sendNow(cl.getUserId(), CloudSimTags.CLOUDLET_RETURN, cl);
-
 				return;
 			}
 
@@ -745,19 +746,34 @@ public class Datacenter extends SimEntity {
 			Host host = getVmAllocationPolicy().getHost(vmId, userId);
 			Vm vm = host.getVm(vmId, userId);
 			CloudletScheduler scheduler = vm.getCloudletScheduler();
-			double estimatedFinishTime = scheduler.cloudletSubmit(cl, fileTransferTime);
-
-			// if this cloudlet is in the exec queue
-			if (estimatedFinishTime > 0.0 && !Double.isInfinite(estimatedFinishTime) && cl.getStatus() == Cloudlet.INEXEC) {
-				estimatedFinishTime += fileTransferTime;
-				send(getId(), estimatedFinishTime, CloudSimTags.VM_DATACENTER_EVENT);
-				Log.printLine("Cloud exec: "+ estimatedFinishTime + " Cloudlet name:"+ cl.getCloudletId());
-			} else if(estimatedFinishTime > 0.0  && cl.getStatus() == Cloudlet.PARTNER_SUBMMITED){
-				estimatedFinishTime += fileTransferTime;
-				Log.printLine("Cloud submmited to partner: "+ estimatedFinishTime + " Cloudlet name:"+ cl.getCloudletId()); 
-				send(getId(), 0, CloudSimTags.DATACENTER_SUBMIT_TO_PARTNER,cl);
-			}
-
+			/**
+			 * //TODO estimate task, if  estimate is
+			 * less than  deadline time
+			 * 	->if not have any task execute ->execute
+			 * 	-> else add to waiting list
+			 * else send to partner to execute
+			 * 		
+			 */
+			double estimatedFinishTime = scheduler.estimateCloudletFinishTime(cl, fileTransferTime);
+			estimatedFinishTime += fileTransferTime;
+//			if (estimatedFinishTime > 0.0 && !Double.isInfinite(estimatedFinishTime))
+//			{
+				//exec in this vm
+				if(estimatedFinishTime <= cl.getDeadline()){
+					double estimatedFinishTimeWhenSubmit = scheduler.cloudletSubmit(cl, fileTransferTime,estimatedFinishTime);
+					if (cl.getStatus() == Cloudlet.INEXEC) {
+						estimatedFinishTimeWhenSubmit += fileTransferTime;
+						send(getId(), estimatedFinishTimeWhenSubmit, CloudSimTags.VM_DATACENTER_EVENT);
+						Log.printLine(CloudSim.clock()+ " Cloudlet "+ cl.getCloudletId() + " is executing in " +getName() +" with estimate time" + estimatedFinishTime);
+					} 
+				} 
+				//send to partner execute
+				else{
+					Log.printLine(CloudSim.clock()+ " Cloudlet "+ cl.getCloudletId() + " is sending to parner to estimate"); 
+					send(getId(), 0, CloudSimTags.DATACENTER_SUBMIT_TO_PARTNER,cl);
+				}
+//			}
+			
 			if (ack) {
 				int[] data = new int[3];
 				data[0] = getId();
@@ -779,9 +795,10 @@ public class Datacenter extends SimEntity {
 		checkCloudletCompletion();
 	}
 	
-	protected void processPartnerCloudletEstimate(SimEvent e) {
+	protected void processCloudletEstimate(SimEvent e) {
 		Object[] data = (Object[]) e.getData();
 		Cloudlet cl = (Cloudlet) data[1];
+		Boolean result = false;
 		
 		double fileTransferTime = predictFileTransferTime(cl.getRequiredFiles());
 		
@@ -790,11 +807,21 @@ public class Datacenter extends SimEntity {
 		double time = Double.MAX_VALUE;
 		
 		for (Vm vm: vms) {
-			double esTime = vm.getCloudletScheduler().estimatePartnerCloudlet(cl, fileTransferTime);
-			if (esTime > 0.0 && esTime < time) {
-				time = esTime;
-				cl.setVmId(vm.getId());
+			CloudletScheduler scheduler = vm.getCloudletScheduler();
+			if(scheduler.getCloudletPartnerWaitingForExec() == null){
+				double esTime = scheduler.estimatePartnerCloudlet(cl, fileTransferTime);
+				Log.printLine(esTime);
+				if (esTime > 0.0 && esTime < time) {
+					time = esTime;
+					cl.setVmId(vm.getId());
+				}
 			}
+		}
+		//if can execute this task ontime
+		if(time <=  cl.getDeadline() && time != -1){
+			result = true;
+			Vm vm  = getVmList().get(cl.getVmId());
+			vm.getCloudletScheduler().setCloudletPartnerWaitingForExec(cl);
 		}
 		
 		Object[] reData;
@@ -805,9 +832,22 @@ public class Datacenter extends SimEntity {
 		} else {
 			resCloudlet.setFinishTime(0);
 		}
-		
-		reData = new Object[] {data[0], resCloudlet};
+
+		reData = new Object[] {data[0], resCloudlet, result};
 		sendNow(e.getSource(), CloudSimTags.PARTNER_INTERNAL_ESTIMATE_RETURN, reData);
+	}
+	
+	/**
+	 * cancel waiting for executing of vm
+	 * @param ev
+	 */
+	private void processSubmitCancelWatingExec(SimEvent ev) {
+		ResCloudlet rCl = (ResCloudlet) ev.getData();
+		int vmID = rCl.getCloudlet().getVmId() ;
+		List<Vm> vms = getVmList();
+		Vm vm  = vms.get(vmID);
+		vm.getCloudletScheduler().setCloudletPartnerWaitingForExec(null);
+		Log.printLine(CloudSim.clock() + " canceled waiting exec on VM: #"+ vmID);
 	}
 	
 	protected void processPartnerCloudlet(SimEvent ev) {
@@ -815,7 +855,7 @@ public class Datacenter extends SimEntity {
 		Object[] data = (Object[]) ev.getData();
 		Cloudlet cl = (Cloudlet)data[1];
 		
-		if (cl.isFinished()) {
+		if(cl.isFinished()) {
 			// do not process again
 			Object[] ret = { data[0], CloudSimTags.FALSE, "This cloudlet has been done before!", cl };
 			sendNow(cl.getUserId(), CloudSimTags.PARTNER_EXEC_INTERNAL_RETURN, ret);
@@ -834,7 +874,7 @@ public class Datacenter extends SimEntity {
 		Host host = getVmAllocationPolicy().getHost(vmId, userId);
 		Vm vm = host.getVm(vmId, userId);
 		CloudletScheduler scheduler = vm.getCloudletScheduler();
-		double estimatedFinishTime = scheduler.cloudletSubmit(cl, fileTransferTime);
+		double estimatedFinishTime = scheduler.cloudletSubmit(cl, fileTransferTime,0);
 
 		// if this cloudlet is in the exec queue
 		if (estimatedFinishTime > 0.0 && !Double.isInfinite(estimatedFinishTime) && cl.getStatus() == Cloudlet.INEXEC) {
@@ -847,7 +887,6 @@ public class Datacenter extends SimEntity {
 		send(cl.getUserId(), estimatedFinishTime, CloudSimTags.PARTNER_EXEC_INTERNAL_RETURN, returnData);
 	
 	}
-
 	/**
 	 * Predict file transfer time.
 	 * 
@@ -1006,6 +1045,32 @@ public class Datacenter extends SimEntity {
 			}
 		}
 	}
+	
+	/**
+	 * Verifies if some cloudlet inside this PowerDatacenter already finished. If yes, send it to
+	 * the User/Broker
+	 * 
+	 * @pre $none
+	 * @post $none
+	 */
+	protected void checkCloudletEstimateComplete() {
+		//TODO: just clone. implement it
+		List<? extends Host> list = getVmAllocationPolicy().getHostList();
+		for (int i = 0; i < list.size(); i++) {
+			Host host = list.get(i);
+			for (Vm vm : host.getVmList()) {
+				while (vm.getCloudletScheduler().isFinishedEstimate()) {
+					Cloudlet cl = vm.getCloudletScheduler().getNextFinishedEstimate();
+					if (cl != null) {
+						//TODO send it 
+						sendNow(cl.getUserId(), CloudSimTags.CLOUDLET_RETURN, cl);
+					}
+				}
+			}
+		}
+	}
+	
+	
 
 	/**
 	 * Adds a file into the resource's storage before the experiment starts. If the file is a master

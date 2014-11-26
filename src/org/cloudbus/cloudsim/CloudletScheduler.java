@@ -8,6 +8,7 @@
 
 package org.cloudbus.cloudsim;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -26,6 +27,10 @@ public abstract class CloudletScheduler {
 
 	/** The current mips share. */
 	private List<Double> currentMipsShare;
+	
+	private double totalEstimatetime;
+	
+	private  Cloudlet cloudletPartnerWaitingForExec;
 
 	/**
 	 * Creates a new CloudletScheduler object. This method must be invoked before starting the
@@ -36,6 +41,7 @@ public abstract class CloudletScheduler {
 	 */
 	public CloudletScheduler() {
 		setPreviousTime(0.0);
+		cloudletPartnerWaitingForExec = null;
 	}
 
 	/**
@@ -59,7 +65,7 @@ public abstract class CloudletScheduler {
 	 * @pre gl != null
 	 * @post $none
 	 */
-	public abstract double cloudletSubmit(Cloudlet gl, double fileTransferTime);
+	public abstract double cloudletSubmit(Cloudlet gl, double fileTransferTime, double estimatedFinishTime);
 	
 	/**
 	 * Estimate cloudlet processing time
@@ -72,6 +78,21 @@ public abstract class CloudletScheduler {
 	 * @post none
 	 */
 	public abstract double estimatePartnerCloudlet(Cloudlet cloudlet, double fileTransferTime);
+	
+	
+	
+	/**
+	 * Estimate cloudlet processing time
+	 * 
+	 * @param cloudlet the partner cloudlet
+	 * @return the processing time of this cloudlet
+	 * 			if the Vm is busy return 0.0
+	 * 
+	 * @pre cloudlet != null
+	 * @post none
+	 */
+	public abstract double estimateCloudletFinishTime(Cloudlet cloudlet, double fileTransferTime);
+	
 
 	/**
 	 * Receives an cloudlet to be executed in the VM managed by this scheduler.
@@ -263,5 +284,39 @@ public abstract class CloudletScheduler {
 	public <T extends ResCloudlet> List<T>  getCloudletPartnerSubmittedList() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	public double getTotalEstimatetime() {
+		return totalEstimatetime;
+	}
+
+	public void setTotalEstimatetime(double totalEstimatetime) {
+		this.totalEstimatetime = totalEstimatetime;
+	}
+	
+	public void clearTotalEstimateTime() {
+		setTotalEstimatetime(0);
+	}
+	public void updateTotalEstimateTime(double time) {
+		setTotalEstimatetime(getTotalEstimatetime() + time);
+	}
+
+	public boolean isFinishedEstimate() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	public Cloudlet getNextFinishedEstimate() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	
+	public Cloudlet getCloudletPartnerWaitingForExec() {
+		return cloudletPartnerWaitingForExec;
+	}
+
+	public void setCloudletPartnerWaitingForExec(
+			Cloudlet cloudletPartnerWaitingForExec) {
+		this.cloudletPartnerWaitingForExec = cloudletPartnerWaitingForExec;
 	}
 }

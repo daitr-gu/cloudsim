@@ -298,7 +298,7 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	 * @post $none
 	 */
 	@Override
-	public double cloudletSubmit(Cloudlet cloudlet, double fileTransferTime) {
+	public double cloudletSubmit(Cloudlet cloudlet, double fileTransferTime,double estimatedFinishTime) {
 		ResCloudlet rcl = new ResCloudlet(cloudlet);
 		rcl.setCloudletStatus(Cloudlet.INEXEC);
 		for (int i = 0; i < cloudlet.getNumberOfPes(); i++) {
@@ -337,7 +337,7 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 	 */
 	@Override
 	public double cloudletSubmit(Cloudlet cloudlet) {
-		return cloudletSubmit(cloudlet, 0.0);
+		return cloudletSubmit(cloudlet, 0.0,0);
 	}
 
 	/**
@@ -551,6 +551,13 @@ public class CloudletSchedulerTimeShared extends CloudletScheduler {
 			bw += cloudlet.getCloudlet().getUtilizationOfBw(CloudSim.clock());
 		}
 		return bw;
+	}
+
+	@Override
+	public double estimateCloudletFinishTime(Cloudlet cloudlet,
+			double fileTransferTime) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 
 }

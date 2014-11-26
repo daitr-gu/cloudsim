@@ -116,7 +116,7 @@ public class CloudletSchedulerDynamicWorkload extends CloudletSchedulerTimeShare
 	 */
 	@Override
 	public double cloudletSubmit(Cloudlet cl) {
-		return cloudletSubmit(cl, 0);
+		return cloudletSubmit(cl, 0,0);
 	}
 
 	/**
@@ -129,7 +129,7 @@ public class CloudletSchedulerDynamicWorkload extends CloudletSchedulerTimeShare
 	 * @post $none
 	 */
 	@Override
-	public double cloudletSubmit(Cloudlet cl, double fileTransferTime) {
+	public double cloudletSubmit(Cloudlet cl, double fileTransferTime,double estimatedFinishTime) {
 		ResCloudlet rcl = new ResCloudlet(cl);
 		rcl.setCloudletStatus(Cloudlet.INEXEC);
 

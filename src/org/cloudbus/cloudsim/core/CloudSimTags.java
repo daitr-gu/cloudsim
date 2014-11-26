@@ -284,6 +284,16 @@ public class CloudSimTags {
     public static final int DATACENTER_RETURN_FROM_PARTNER = BASE + 57;
 
 	public static final int PARTNER_ESTIMATE_SENT = BASE + 58;
+	
+	public static final int VM_DATACENTER_ESTIMATE_RETURN = BASE + 59;
+	
+	public static final int CANCEL_WAITING_EXEC_CLOUDLET_FROM_VM = BASE + 60;
+	
+	public static final int CANCEL_PARTNER_WAITING_EXEC = BASE + 61;
+	
+	
+	
+	
 
 	/** Private Constructor */
 	private CloudSimTags() {

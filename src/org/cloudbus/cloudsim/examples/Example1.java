@@ -102,13 +102,13 @@ public class Example1 {
             		Log.printLine(broker.getName() + ": There is no cloudlet");
             		continue;
             	}
-            	
+            
             	int totalVms = vmList.size();
             	if (totalVms <= 0) {
             		Log.printLine(broker.getName() + ": There is no vm => can not submit cloudlet.");
             		continue;
             	}
-            	
+            	Log.printLine(broker.getName() + " has " + m_cloudlets.size()+ " cloudlet");
             	for (int j = 0; j < m_cloudlets.size(); j++) {
             		int selectedVm = j % totalVms;
             		JSONObject m_cloudlet = (JSONObject) m_cloudlets.get(j);
@@ -116,10 +116,11 @@ public class Example1 {
             		long fileSize = (Long) m_cloudlet.get("fileSize");
             		long outputSize = (Long) m_cloudlet.get("outputSize");
             		int pesNumber = ((Long) m_cloudlet.get("pesNumber")).intValue();
+            		long deadline = (Long) m_cloudlet.get("deadline");
             		
             		UtilizationModel utilizationModel = new UtilizationModelFull();
             		
-            		Cloudlet cloudlet = new Cloudlet(j, length, pesNumber, fileSize, outputSize, 
+            		Cloudlet cloudlet = new Cloudlet(j, length, pesNumber, fileSize, outputSize,deadline,
             				utilizationModel, utilizationModel, utilizationModel);
             		
             		cloudlet.setUserId(broker.getId());
