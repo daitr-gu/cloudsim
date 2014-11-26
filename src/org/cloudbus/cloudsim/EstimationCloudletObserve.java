@@ -43,7 +43,7 @@ public class EstimationCloudletObserve {
 			double bestFinishTime = resCloudlet.getClouddletFinishTime();
 			if (finishTime > 0 && finishTime < bestFinishTime) {
 				DatacenterCancelExec = getDatacenterIdOFCurrrentExecVm();
-				setNewVmToExce(datacenterID,finishTime,reResCloudlet);		
+				setNewVmToExce(datacenterID,finishTime,reResCloudlet);
 			}
 		}
 		return DatacenterCancelExec;
@@ -53,11 +53,6 @@ public class EstimationCloudletObserve {
 		setDatacenterIdOFCurrrentExecVm(datacenterID);
 		resCloudlet.setFinishTime(finishTime);
 		resCloudlet.getCloudlet().setVmId(reResCloudlet.getCloudlet().getVmId()); 
-	}
-
-	private void cancelExecOfCurrentVm(ResCloudlet reResCloudlet) {
-			Cloudlet cl = reResCloudlet.getCloudlet();
-			int dest = getDatacenterIdOFCurrrentExecVm();
 	}
 
 	public boolean isFinished() {

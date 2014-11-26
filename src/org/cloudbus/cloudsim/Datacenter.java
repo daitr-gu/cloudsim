@@ -818,12 +818,11 @@ public class Datacenter extends SimEntity {
 			}
 		}
 		//if can execute this task ontime
-		if(time <=  cl.getDeadline() && time != -1){
+		if(time <=  cl.getDeadline() && time != Double.MAX_VALUE){
 			result = true;
 			Vm vm  = getVmList().get(cl.getVmId());
 			vm.getCloudletScheduler().setCloudletPartnerWaitingForExec(cl);
 		}
-		
 		Object[] reData;
 		ResCloudlet resCloudlet = new ResCloudlet(cl);
 		

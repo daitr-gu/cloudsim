@@ -47,7 +47,7 @@ public class Example1 {
 	 */
 	@SuppressWarnings("unused")
 	public static void main(String[] args) {
-		Log.printLine("Starting CloudSimExample1...");
+//		Log.printLine("Starting CloudSimExample1...");
 		brokersList = new ArrayList<DatacenterBroker>();
 
 		try {
@@ -72,7 +72,7 @@ public class Example1 {
             	JSONObject member = (JSONObject) members.get(i);
             	
             	String m_name = (String) member.get("name");
-            	Log.printLine(m_name);
+//            	Log.printLine(m_name);
             	DatacenterBroker broker = createBroker(m_name);
             	brokersList.add(broker);
             	
@@ -99,16 +99,16 @@ public class Example1 {
             	
             	JSONArray m_cloudlets = (JSONArray) member.get("cloudlets");
             	if (m_cloudlets == null) {
-            		Log.printLine(broker.getName() + ": There is no cloudlet");
+//            		Log.printLine(broker.getName() + ": There is no cloudlet");
             		continue;
             	}
             
             	int totalVms = vmList.size();
             	if (totalVms <= 0) {
-            		Log.printLine(broker.getName() + ": There is no vm => can not submit cloudlet.");
+//            		Log.printLine(broker.getName() + ": There is no vm => can not submit cloudlet.");
             		continue;
             	}
-            	Log.printLine(broker.getName() + " has " + m_cloudlets.size()+ " cloudlet");
+//            	Log.printLine(broker.getName() + " has " + m_cloudlets.size()+ " cloudlet");
             	for (int j = 0; j < m_cloudlets.size(); j++) {
             		int selectedVm = j % totalVms;
             		JSONObject m_cloudlet = (JSONObject) m_cloudlets.get(j);

@@ -121,6 +121,8 @@ public class DatacenterBroker extends SimEntity {
 		setEstimateCloudletMap(new HashMap<Integer, Map<Integer, EstimationCloudletObserve>>());
 		setBrokerIdsList(new ArrayList<Integer>());
 		setEstimateCloudletofParnerMap(new HashMap<Integer, EstimationCloudletOfPartner>());
+		setCloudletEstimating(new ArrayList<Cloudlet>());
+		setCloudletWaitingForEstimate(new ArrayList<Cloudlet>());
 		
 	}
 
@@ -359,7 +361,6 @@ public class DatacenterBroker extends SimEntity {
 				clearDatacenters();
 				createVmsInDatacenter(0);
 			}
-
 		}
 	}
 
@@ -454,10 +455,7 @@ public class DatacenterBroker extends SimEntity {
 	}
 
 	protected void processPartnerCloudletEstimate(SimEvent ev) {
-		Log.printLine(CloudSim.clock() + ": " + getName() + ": Received partner estimate cloudlet.");
-		
 		Map<Integer, Map<Integer, EstimationCloudletObserve>> estimateCloudletMap = getEstimateCloudletMap();
-		
 		if (!estimateCloudletMap.containsKey(ev.getSource())) {
 			Map<Integer, EstimationCloudletObserve> cloudletList = new HashMap<Integer, EstimationCloudletObserve>();
 			estimateCloudletMap.put(ev.getSource(), cloudletList);
@@ -470,10 +468,13 @@ public class DatacenterBroker extends SimEntity {
 		ResCloudlet resCloudlet = new ResCloudlet(cloudlet);
 		resCloudlet.setFinishTime(Double.MAX_VALUE);
 		
+		Log.printLine(CloudSim.clock() + ": " + getName() + ": Received partner estimate cloudlet #"+resCloudlet.getCloudletId());
 		EstimationCloudletObserve eco = new EstimationCloudletObserve(resCloudlet, datacenterIDs);
 		
 		cloudletList.put(new Integer(cloudlet.getCloudletId()), eco);
-		
+		if(datacenterIDs.size() == 0 ){
+			Log.printLine(getName()+ " has no datacenter, can not estimate");
+		}
 		for (int i: datacenterIDs) {
 			Object[] data = {ev.getSource(), cloudlet};
 			sendNow(i, CloudSimTags.PARTNER_ESTIMATE, data);
@@ -491,6 +492,7 @@ public class DatacenterBroker extends SimEntity {
 		int partnerID = (int)data[0];
 		ResCloudlet resCloudlet = (ResCloudlet) data[1];
 		int cloudletID = resCloudlet.getCloudlet().getCloudletId();
+		
 		
 		Map<Integer, EstimationCloudletObserve> partnerCloudletList = getEstimateCloudletMap().get(partnerID);
 		
@@ -575,9 +577,9 @@ public class DatacenterBroker extends SimEntity {
 	 * @param ev
 	 */
 	protected void processSentTaskToPartnerEstimate(SimEvent ev) {
-		
 		Cloudlet cl = (Cloudlet) ev.getData();
-		//if process is require estimate in partners
+		
+		if(getCloudletEstimating().size() == 0){
 			ResCloudlet rCl = new ResCloudlet(cl); 
 			List<Integer> partnerIdsList  = new ArrayList<Integer>();
 			for( Integer partnerIds : this.getBrokerIdsList()){
@@ -591,6 +593,11 @@ public class DatacenterBroker extends SimEntity {
 			}
 			EstimationCloudletOfPartner esOfPatner = new EstimationCloudletOfPartner(rCl, partnerIdsList);
 			getEstimateCloudletofParnerMap().put(rCl.getCloudletId(), esOfPatner);
+			getCloudletEstimating().add(cl);
+		} else {
+			getCloudletWaitingForEstimate().add(cl);
+			Log.printLine(CloudSim.clock()+ " "+ getName()+" another task is estimating, added Cloulet #"+cl.getCloudletId()+"to waiting estimate list");
+		}
 	}
 	/**
 	 *  Process result estimate form partner ID 
@@ -602,18 +609,30 @@ public class DatacenterBroker extends SimEntity {
 		Integer clouletId = rCl.getCloudletId();
 		Integer partnerId =  ev.getSource();
 		Log.printLine(CloudSim.clock() + ": " + getName() + ": Received estimate result from Broker #" + ev.getSource()+ " with estimate time: "+rCl.getClouddletFinishTime());
-		
 		EstimationCloudletOfPartner partnerCloudletEstimateList = getEstimateCloudletofParnerMap().get(clouletId);
 		if (partnerCloudletEstimateList.getPartnerIdsList().contains(partnerId)) {
 			int partnerCancelWaitingExec = partnerCloudletEstimateList.receiveEstimateResult(partnerId, rCl);
-			
 			if(partnerCancelWaitingExec != -1){
 				sendNow(partnerId, CloudSimTags.CANCEL_PARTNER_WAITING_EXEC, rCl);
 			}
 			if (partnerCloudletEstimateList.isFinished()) {
 				// send result to partner
-				sendNow(partnerId, CloudSimTags.PARTNER_EXEC, partnerCloudletEstimateList.getResCloudlet().getCloudlet());
+				ResCloudlet resCloudlet = partnerCloudletEstimateList.getResCloudlet();
+				if(resCloudlet.getClouddletFinishTime() < resCloudlet.getCloudlet().getDeadline()){
+					sendNow(partnerId, CloudSimTags.PARTNER_EXEC, partnerCloudletEstimateList.getResCloudlet().getCloudlet());
+				} else {
+					Log.printLine(CloudSim.clock()+ " can not send cloudlet #"+resCloudlet.getCloudletId()+ " to any where, timeout");
+				}
+				getCloudletEstimating().remove(resCloudlet.getCloudlet());
 			}
+		}
+		
+		if(getCloudletWaitingForEstimate().size() != 0 ){
+				Cloudlet estimateCloudlet = getCloudletWaitingForEstimate().get(0);
+				ResCloudlet resCloudlet  = new ResCloudlet(estimateCloudlet);
+				Log.printLine(CloudSim.clock()+ " get cloudlet from waiting list cloulet #"+estimateCloudlet.getCloudletId()+" send to " + "estimate");
+				sendNow(getId(), CloudSimTags.PARTNER_ESTIMATE_SENT,estimateCloudlet);
+				getCloudletWaitingForEstimate().remove(estimateCloudlet);
 		}
 	}
 	
@@ -929,6 +948,23 @@ public class DatacenterBroker extends SimEntity {
 		this.estimateCloudletofParnerMap = estimateCloudletofParnerMap;
 	}
 
+	@SuppressWarnings("unchecked")
+	public <T extends Cloudlet> List<T> getCloudletEstimating() {
+		return (List<T>) cloudletEstimating;
+	}
 
+	public void setCloudletEstimating(List<? extends Cloudlet> cloudletEstimating) {
+		this.cloudletEstimating = cloudletEstimating;
+	}
+
+	@SuppressWarnings("unchecked")
+	public <T extends Cloudlet> List<T> getCloudletWaitingForEstimate() {
+		return (List<T>) cloudletWaitingForEstimate;
+	}
+
+	public void setCloudletWaitingForEstimate(
+			List<? extends Cloudlet> cloudletWaitingForEstimate) {
+		this.cloudletWaitingForEstimate = cloudletWaitingForEstimate;
+	}
 	
 }

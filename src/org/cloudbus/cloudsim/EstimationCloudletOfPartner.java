@@ -33,7 +33,10 @@ public class EstimationCloudletOfPartner {
 			setCurrentBestPartnerId(partnerId);
 			resCloudlet.setFinishTime(finishTime);
 			resCloudlet.getCloudlet().setVmId(reResCloudlet.getCloudlet().getVmId());
+			Log.printLine("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"+bestFinishTime);
+			Log.printLine("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"+resCloudlet.getClouddletFinishTime());
 		}
+		
 		return partner_cancel_waiting_exec;
 	}
 	

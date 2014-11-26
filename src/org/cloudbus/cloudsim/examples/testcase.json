@@ -41,7 +41,7 @@
 				"fileSize": 300,
 				"outputSize": 300,
 				"pesNumber": 1,
-				"deadline" :3000
+				"deadline" :300
 			},
 			{
 				"long": 400000,
@@ -55,14 +55,14 @@
 				"fileSize": 300,
 				"outputSize": 300,
 				"pesNumber": 1,
-				"deadline" :500
+				"deadline" :400
 			},
 			{
 				"long": 400000,
 				"fileSize": 300,
 				"outputSize": 300,
 				"pesNumber": 1,
-				"deadline" :3000
+				"deadline" :300
 			}
 		]
 	},
@@ -96,7 +96,7 @@
 						"size": 1000,
 						"ram": 1024,
 						"bw": 10,
-						"pesNumber": 2,
+						"pesNumber": 1,
 						"vmm": "Xen"
 					}
 				]
