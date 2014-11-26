@@ -59,6 +59,9 @@ public class Cloudlet {
 
 	/** The time where this Cloudlet completes. */
 	private double finishTime;
+	
+	/** The deadline time. */
+	private double deadline;
 
 	/**
 	 * Start time of executing this Cloudlet. With new functionalities, such as CANCEL, PAUSED and
@@ -183,6 +186,7 @@ public class Cloudlet {
 			final int pesNumber,
 			final long cloudletFileSize,
 			final long cloudletOutputSize,
+			final long deadline,
 			final UtilizationModel utilizationModelCpu,
 			final UtilizationModel utilizationModelRam,
 			final UtilizationModel utilizationModelBw) {
@@ -192,6 +196,7 @@ public class Cloudlet {
 				pesNumber,
 				cloudletFileSize,
 				cloudletOutputSize,
+				deadline,
 				utilizationModelCpu,
 				utilizationModelRam,
 				utilizationModelBw,
@@ -232,6 +237,7 @@ public class Cloudlet {
 			final int pesNumber,
 			final long cloudletFileSize,
 			final long cloudletOutputSize,
+			final long deadline,
 			final UtilizationModel utilizationModelCpu,
 			final UtilizationModel utilizationModelRam,
 			final UtilizationModel utilizationModelBw,
@@ -243,6 +249,7 @@ public class Cloudlet {
 				pesNumber,
 				cloudletFileSize,
 				cloudletOutputSize,
+				deadline,
 				utilizationModelCpu,
 				utilizationModelRam,
 				utilizationModelBw,
@@ -282,6 +289,7 @@ public class Cloudlet {
 			final int pesNumber,
 			final long cloudletFileSize,
 			final long cloudletOutputSize,
+			final long deadline,
 			final UtilizationModel utilizationModelCpu,
 			final UtilizationModel utilizationModelRam,
 			final UtilizationModel utilizationModelBw,
@@ -292,6 +300,7 @@ public class Cloudlet {
 				pesNumber,
 				cloudletFileSize,
 				cloudletOutputSize,
+				deadline,
 				utilizationModelCpu,
 				utilizationModelRam,
 				utilizationModelBw,
@@ -331,6 +340,7 @@ public class Cloudlet {
 			final int pesNumber,
 			final long cloudletFileSize,
 			final long cloudletOutputSize,
+			final long deadline,
 			final UtilizationModel utilizationModelCpu,
 			final UtilizationModel utilizationModelRam,
 			final UtilizationModel utilizationModelBw,
@@ -348,6 +358,7 @@ public class Cloudlet {
 		this.cloudletLength = Math.max(1, cloudletLength);
 		this.cloudletFileSize = Math.max(1, cloudletFileSize);
 		this.cloudletOutputSize = Math.max(1, cloudletOutputSize);
+		this.deadline = deadline;
 
 		// Normally, a Cloudlet is only executed on a resource without being
 		// migrated to others. Hence, to reduce memory consumption, set the
@@ -1468,6 +1479,14 @@ public class Cloudlet {
 	 */
 	public double getUtilizationOfBw(final double time) {
 		return getUtilizationModelBw().getUtilization(time);
+	}
+
+	public double getDeadline() {
+		return deadline;
+	}
+
+	public void setDeadline(double deadline) {
+		this.deadline = deadline;
 	}
 
 }
