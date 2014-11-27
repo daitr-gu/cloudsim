@@ -9,6 +9,7 @@
 package org.cloudbus.cloudsim;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -21,7 +22,7 @@ import org.cloudbus.cloudsim.core.SimEvent;
 import org.cloudbus.cloudsim.lists.CloudletList;
 import org.cloudbus.cloudsim.lists.VmList;
 
-import sun.misc.FpUtils;
+
 
 /**
  * DatacentreBroker represents a broker acting on behalf of a user. It hides VM management, as vm
@@ -463,7 +464,11 @@ public class DatacenterBroker extends SimEntity {
 		
 		Map<Integer, EstimationCloudletObserve> cloudletList = estimateCloudletMap.get(ev.getSource());
 		Cloudlet cloudlet = (Cloudlet) ev.getData();
-		List<Integer> datacenterIDs = getDatacenterIdsList();
+		
+		List<Integer> datacenterIDs = new LinkedList<Integer>();
+		for (Integer integer : getDatacenterIdsList()) {
+			datacenterIDs.add(integer);
+		}
 		
 		ResCloudlet resCloudlet = new ResCloudlet(cloudlet);
 		resCloudlet.setFinishTime(Double.MAX_VALUE);
@@ -487,12 +492,12 @@ public class DatacenterBroker extends SimEntity {
 	protected void processPartnerCloudletInternalEstimateReturn(SimEvent ev) {
 		Log.printLine(CloudSim.clock() + ": " + getName() + ": Received internal estimate from datacenter #" 
 						+ ev.getSource());
+		Log.printLine(getDatacenterIdsList());
 		Object[] data = (Object[]) ev.getData();
 		Boolean result = (Boolean)data[2];
 		int partnerID = (int)data[0];
 		ResCloudlet resCloudlet = (ResCloudlet) data[1];
 		int cloudletID = resCloudlet.getCloudlet().getCloudletId();
-		
 		
 		Map<Integer, EstimationCloudletObserve> partnerCloudletList = getEstimateCloudletMap().get(partnerID);
 		
@@ -502,12 +507,15 @@ public class DatacenterBroker extends SimEntity {
 			if(datacenterCancelExecId != -1 ){
 				sendNow(datacenterCancelExecId, CloudSimTags.CANCEL_WAITING_EXEC_CLOUDLET_FROM_VM,resCloudlet );
 			}
+			
 			if (eco.isFinished()) {
 				// send result to partner
 				sendNow(partnerID, CloudSimTags.PARTNER_ESTIMATE_RETURN, eco.getResCloudlet());
 				// remove partner estimation cloudlet 
 				partnerCloudletList.remove(cloudletID);
 			}
+			
+		
 		}
 	}
 	
@@ -625,6 +633,7 @@ public class DatacenterBroker extends SimEntity {
 				}
 				getCloudletEstimating().remove(resCloudlet.getCloudlet());
 			}
+			
 		}
 		
 		if(getCloudletWaitingForEstimate().size() != 0 ){
